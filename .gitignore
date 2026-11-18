@@ -4,4 +4,4 @@ dist/
 uploads/
 uploads-test/
 *.log
-.qoder
+.qoder/
