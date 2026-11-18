@@ -1,0 +1,142 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.row input[type='radio'] {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  accent-color: var(--color-primary-active);
+}
+.selected {
+  border-color: var(--green-400);
+  background: var(--color-surface-brand);
+}
+.unfit {
+  opacity: 0.72;
+  background: var(--color-surface-muted);
+}
+.unfit label { cursor: not-allowed; }
+
+.rowText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.droneName {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
+  overflow: hidden;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.batteryLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.batteryTrack {
+  display: block;
+  width: 84px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--gray-200);
+}
+.batteryFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-success);
+}
+.unfit .batteryFill { background: var(--color-warning-solid); }
+
+.unfitWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.loaded {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--green-200);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-brand);
+}
+.droneIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--green-100);
+  color: var(--green-800);
+}
+.loadedText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.loadedText strong { font-size: var(--text-md); }
+.kicker {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.loadedMeta {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+@media (max-width: 639.98px) {
+  .row { align-items: flex-start; }
+  .row > input[type='radio'] { margin-top: 3px; }
+  .actions > button { flex: 1 1 auto; }
+}

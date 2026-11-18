@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-labelledby="title">
+  <title id="title">GoodPanda</title>
+  <rect width="32" height="32" rx="9" fill="#4ade80" />
+  <circle cx="9" cy="10" r="4" fill="#052e16" />
+  <circle cx="23" cy="10" r="4" fill="#052e16" />
+  <circle cx="16" cy="18" r="9.5" fill="#fff" />
+  <ellipse cx="12.4" cy="17" rx="2.3" ry="2.9" fill="#052e16" transform="rotate(-18 12.4 17)" />
+  <ellipse cx="19.6" cy="17" rx="2.3" ry="2.9" fill="#052e16" transform="rotate(18 19.6 17)" />
+  <circle cx="12.8" cy="16.6" r="0.8" fill="#fff" />
+  <circle cx="19.2" cy="16.6" r="0.8" fill="#fff" />
+  <ellipse cx="16" cy="22.2" rx="1.7" ry="1.1" fill="#052e16" />
+</svg>

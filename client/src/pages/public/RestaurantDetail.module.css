@@ -1,0 +1,201 @@
+.page { display: flex; flex-direction: column; gap: var(--space-5); }
+:global(body):has(.cartBar) { padding-bottom: 80px; }
+
+/* ---------- Header ---------- */
+.header { display: flex; flex-direction: column; }
+.cover {
+  --media-ratio: 16 / 9;
+  border-radius: var(--radius-xl);
+}
+@media (min-width: 768px) {
+  .cover { --media-ratio: 3 / 1; }
+}
+@media (min-width: 1024px) {
+  .cover { --media-ratio: 4 / 1; }
+}
+.closedCover img { filter: grayscale(0.7); }
+.coverSkeleton { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-xl); }
+@media (min-width: 768px) {
+  .coverSkeleton { aspect-ratio: 3 / 1; }
+}
+@media (min-width: 1024px) {
+  .coverSkeleton { aspect-ratio: 4 / 1; }
+}
+
+.identity {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+}
+.fav { position: absolute; top: var(--space-3); right: var(--space-4); }
+@media (min-width: 640px) {
+  .fav { position: static; margin: var(--space-3) 0 0 auto; }
+}
+@media (min-width: 640px) {
+  .identity { flex-direction: row; gap: var(--space-4); }
+  .identityText { padding-top: var(--space-3); }
+}
+.logo {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  margin-top: -36px;
+  border: 3px solid var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+.identityText { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.titleRow { text-wrap: balance; }
+.titleRow > :last-child { margin-left: var(--space-2); vertical-align: middle; }
+.title {
+  display: inline;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+}
+@media (min-width: 768px) {
+  .title { font-size: var(--text-2xl); }
+}
+.aboutText { display: block; }
+.aboutText + .aboutText { margin-top: var(--space-2); }
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.metaItem { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; }
+a.metaItem { color: inherit; text-decoration: none; }
+a.metaItem:hover { text-decoration: underline; }
+.metaItem svg { flex-shrink: 0; color: var(--color-text-subtle); }
+
+/* ---------- Category nav ---------- */
+.catNav {
+  position: sticky;
+  top: var(--header-offset, 64px);
+  z-index: var(--z-sticky);
+  margin: 0 calc(var(--space-4) * -1);
+  padding: var(--space-2) 0;
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-border);
+}
+@media (min-width: 768px) {
+  .catNav { margin: 0 calc(var(--space-6) * -1); }
+  .catScroller { padding: 2px var(--space-6); }
+}
+.catScroller {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: 2px var(--space-4);
+  scrollbar-width: none;
+}
+.catScroller::-webkit-scrollbar { display: none; }
+.catScroller > * { flex-shrink: 0; }
+
+/* ---------- Sections ---------- */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  scroll-margin-top: calc(var(--header-offset, 64px) + 64px);
+}
+.sectionTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+}
+.sectionTitle:focus { outline: none; }
+.sectionTitle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+.menuGrid { display: grid; gap: var(--space-3); grid-template-columns: 1fr; }
+@media (min-width: 768px) {
+  .menuGrid { grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+}
+
+/* ---------- Food card ---------- */
+.food {
+  display: grid;
+  grid-template-columns: 1fr 104px;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+}
+@media (min-width: 768px) {
+  .food { grid-template-columns: 1fr 120px; padding: var(--space-4); }
+}
+.foodText { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.foodName { font-size: var(--text-md); font-weight: var(--weight-semibold); line-height: var(--leading-snug); }
+.foodDesc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+.foodFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+.price { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.foodImg { border-radius: var(--radius-md); align-self: start; }
+
+.unavailable { background: var(--color-surface-muted); box-shadow: none; }
+.unavailable .foodName,
+.unavailable .foodDesc,
+.unavailable .price { color: var(--color-text-subtle); }
+.unavailable .foodImg { filter: grayscale(1); opacity: 0.6; }
+
+/* ---------- View cart bar ---------- */
+.cartBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+.cartBarBtn {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 560px;
+  min-height: 52px;
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease);
+}
+.cartBarBtn:hover { background: var(--color-primary-hover); }
+.cartBarBtn:focus-visible { outline: none; box-shadow: var(--ring), var(--shadow-lg); }
+.cartBarCount { position: static; }
+.cartBarLabel { flex: 1; text-align: left; }
+.cartBarTotal { font-variant-numeric: tabular-nums; }

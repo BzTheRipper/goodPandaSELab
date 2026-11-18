@@ -1,0 +1,19 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
+}
+.md { width: 44px; height: 44px; }
+.sm { width: 40px; height: 40px; }
+.btn:hover { color: var(--color-danger-solid); transform: scale(1.05); }
+.btn:focus-visible { outline: none; box-shadow: var(--ring); }
+.btn:disabled { opacity: 0.6; cursor: progress; }
+.saved, .saved:hover { color: var(--color-danger-solid); background: var(--color-danger-bg); border-color: transparent; }

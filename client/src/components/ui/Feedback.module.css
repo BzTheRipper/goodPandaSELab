@@ -1,0 +1,72 @@
+/* ---------- Alert ---------- */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: var(--tone-bg);
+  color: var(--tone-fg);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+.alert > svg { margin-top: 1px; }
+.alertBody { flex: 1; min-width: 0; }
+.alertTitle { font-weight: var(--weight-semibold); }
+.info { --tone-bg: var(--color-info-bg); --tone-fg: var(--color-info); }
+.success { --tone-bg: var(--color-success-bg); --tone-fg: var(--color-success); }
+.warning { --tone-bg: var(--color-warning-bg); --tone-fg: var(--color-warning); }
+.danger { --tone-bg: var(--color-danger-bg); --tone-fg: var(--color-danger); }
+.brand { --tone-bg: var(--color-surface-brand); --tone-fg: var(--green-900); border-color: var(--green-200); }
+
+/* ---------- Empty / error state ---------- */
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+}
+.compact { padding: var(--space-8) var(--space-4); }
+.stateIcon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-brand);
+  color: var(--green-700);
+}
+.stateIcon.danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+.stateTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+.stateText {
+  max-width: 36ch;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.stateAction { margin-top: var(--space-2); display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
+
+/* ---------- Skeleton ---------- */
+.skeleton {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--gray-100) 0%, var(--gray-200) 40%, var(--gray-100) 80%);
+  background-size: 300% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+.skeletonText { height: 0.85em; margin: 0.35em 0; }
+.skeletonCircle { border-radius: 50%; }
+
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}

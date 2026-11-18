@@ -1,0 +1,191 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.orderCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+.attention {
+  border-color: var(--color-warning-solid);
+  background: linear-gradient(180deg, var(--color-warning-bg), var(--color-surface) 46%);
+}
+.attention:hover {
+  border-color: var(--color-warning-solid);
+}
+.ready {
+  border-color: var(--green-200);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.restaurant {
+  overflow: hidden;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meta {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.mid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+.hub {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hub > svg {
+  flex-shrink: 0;
+  color: var(--color-text-subtle);
+}
+.total {
+  flex-shrink: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.callout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+}
+.callout > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.calloutSuccess {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-1);
+}
+.placed {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+.open {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--color-link);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.orderCard:hover .open {
+  color: var(--color-link-hover);
+}
+.open > svg {
+  transition: transform var(--duration-fast) var(--ease);
+}
+.orderCard:hover .open > svg {
+  transform: translateX(2px);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.count {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.filter {
+  flex: 0 1 220px;
+  min-width: 170px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .open > svg {
+    transition: none;
+  }
+  .orderCard:hover .open > svg {
+    transform: none;
+  }
+}
+
+.item { position: relative; }
+.orderCard.withAction { padding-bottom: calc(var(--space-5) + 44px); }
+.reorder { position: absolute; left: var(--space-5); bottom: var(--space-5); }
+@media (min-width: 768px) {
+  .reorder { left: var(--space-6); bottom: var(--space-6); }
+  .orderCard.withAction { padding-bottom: calc(var(--space-6) + 44px); }
+}
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.rating > svg { color: var(--color-warning-solid); }

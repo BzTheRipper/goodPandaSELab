@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"D:/SE Lab Project/GoodPanda\" && ls -la && npm -v && \\(mongod --version 2>/dev/null | head -1 || echo \"no mongod\"\\) && \\(mongosh --version 2>/dev/null || echo \"no mongosh\"\\))"
+    ]
+  }
+}

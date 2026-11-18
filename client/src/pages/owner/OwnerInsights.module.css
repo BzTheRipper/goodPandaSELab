@@ -1,0 +1,103 @@
+.page { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+@media (min-width: 1024px) {
+  .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
+}
+.stat { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.statIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-softer);
+  color: var(--color-link);
+}
+.statValue {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+}
+@media (min-width: 768px) {
+  .statValue { font-size: var(--text-2xl); }
+}
+.statLabel { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.statHint { color: var(--color-text-subtle); font-size: var(--text-xs); line-height: var(--leading-snug); }
+
+.chartTotal { margin: var(--space-3) 0 var(--space-4); color: var(--color-text-muted); font-size: var(--text-sm); }
+.chartTotal strong { color: var(--color-text); font-size: var(--text-lg); }
+.chart { display: flex; align-items: stretch; gap: 3px; height: 200px; }
+@media (min-width: 640px) {
+  .chart { gap: var(--space-2); height: 220px; }
+}
+.barCol { display: flex; flex: 1; flex-direction: column; align-items: center; gap: var(--space-1); min-width: 0; }
+.barTrack {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+.bar {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  transition: height 200ms var(--ease);
+}
+.barCol:hover .bar { background: var(--color-primary-hover); }
+.barLabel { color: var(--color-text-subtle); font-size: 0.6875rem; font-variant-numeric: tabular-nums; }
+
+.split { display: grid; gap: var(--space-5); }
+@media (min-width: 1024px) {
+  .split { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+}
+.side { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.top { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.topItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "rank name revenue"
+    "rank qty revenue";
+  align-items: center;
+  gap: 0 var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border);
+}
+.topItem:first-child { border-top: 0; padding-top: 0; }
+.rank {
+  grid-area: rank;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--green-900);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+.topName { grid-area: name; overflow: hidden; font-weight: var(--weight-semibold); text-overflow: ellipsis; white-space: nowrap; }
+.topQty { grid-area: qty; color: var(--color-text-muted); font-size: var(--text-sm); }
+.topRevenue { grid-area: revenue; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+
+.rating { display: flex; align-items: center; gap: var(--space-3); }
+.ratingValue { font-size: var(--text-3xl); font-weight: var(--weight-bold); line-height: 1; }
+.ratingMeta { display: flex; flex-direction: column; gap: var(--space-1); }
+
+.statusList { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.statusList li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.statusCount { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.muted { color: var(--color-text-muted); font-size: var(--text-sm); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar { transition: none; }
+}

@@ -1,0 +1,70 @@
+.card { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.iconWrap {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--tone-bg);
+  color: var(--tone-fg);
+}
+.brand { --tone-bg: var(--green-100); --tone-fg: var(--green-800); --flash-rgb: 34 197 94; }
+.info { --tone-bg: var(--color-info-bg); --tone-fg: var(--color-info); --flash-rgb: 59 130 246; }
+.success { --tone-bg: var(--color-success-bg); --tone-fg: var(--color-success); --flash-rgb: 34 197 94; }
+.warning { --tone-bg: var(--color-warning-bg); --tone-fg: var(--color-warning); --flash-rgb: 245 158 11; }
+.danger { --tone-bg: var(--color-danger-bg); --tone-fg: var(--color-danger); --flash-rgb: 220 38 38; }
+.neutral { --tone-bg: var(--color-neutral-bg); --tone-fg: var(--color-neutral); --flash-rgb: 148 163 184; }
+
+.heroText { min-width: 0; flex: 1; }
+.titleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.015em;
+}
+.copy {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  max-width: 62ch;
+}
+.reason {
+  margin-top: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--color-danger);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.divider { height: 1px; background: var(--color-border); }
+
+.flash { animation: statusFlash 1.1s var(--ease); }
+@keyframes statusFlash {
+  0% { box-shadow: 0 0 0 0 rgb(var(--flash-rgb, 34 197 94) / 0.45); }
+  100% { box-shadow: 0 0 0 12px rgb(var(--flash-rgb, 34 197 94) / 0); }
+}
+
+@media (max-width: 639.98px) {
+  .hero { gap: var(--space-3); }
+  .iconWrap { width: 42px; height: 42px; border-radius: var(--radius-md); }
+  .title { font-size: var(--text-lg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash { animation: none; }
+}

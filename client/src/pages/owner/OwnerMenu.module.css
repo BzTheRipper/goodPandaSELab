@@ -1,0 +1,86 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.filter { flex: 0 1 240px; }
+.count { color: var(--color-text-muted); font-size: var(--text-sm); }
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+@media (min-width: 640px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.itemCard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.media { width: 100%; }
+.body { display: flex; flex: 1; flex-direction: column; gap: var(--space-2); padding: var(--space-4); }
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.name { margin: 0; font-size: var(--text-md); font-weight: var(--weight-bold); line-height: var(--leading-snug); }
+.category {
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.description {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+.priceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+.priceRow > strong { font-size: var(--text-lg); font-variant-numeric: tabular-nums; }
+.availability { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--text-sm); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.form { display: flex; flex-direction: column; gap: var(--space-4); }
+.formGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+@media (min-width: 640px) {
+  .formGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.formGrid > :last-child { grid-column: 1 / -1; }
+.uploadRow { display: flex; align-items: flex-start; gap: var(--space-4); }
+.preview { flex: 0 0 160px; width: 160px; }
+.uploadText { display: flex; flex: 1; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.helpLink { color: var(--color-text-muted); font-size: var(--text-sm); }
+.helpLink a { color: var(--color-link); }
+
+@media (max-width: 639.98px) {
+  .uploadRow { flex-direction: column; }
+  .preview { flex-basis: auto; width: 100%; }
+}

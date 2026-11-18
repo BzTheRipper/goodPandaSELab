@@ -1,0 +1,29 @@
+.spinner {
+  display: inline-block;
+  width: var(--spinner-size, 20px);
+  height: var(--spinner-size, 20px);
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.7s linear infinite;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.page {
+  display: grid;
+  place-items: center;
+  gap: var(--space-3);
+  min-height: 40vh;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.page .spinner {
+  --spinner-size: 32px;
+  color: var(--green-500);
+  border-width: 3px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

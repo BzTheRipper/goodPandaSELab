@@ -1,0 +1,151 @@
+/*
+ * GoodPanda design tokens: the single place to change the theme.
+ * Light mode only. Contrast notes (WCAG AA) are in client/DESIGN.md.
+ */
+:root {
+  /* ---- Brand: light green ---- */
+  --green-50: #f0fdf4;
+  --green-100: #dcfce7;
+  --green-200: #bbf7d0;
+  --green-300: #86efac;
+  --green-400: #4ade80;
+  --green-500: #22c55e;
+  --green-600: #16a34a;
+  --green-700: #15803d;
+  --green-800: #166534;
+  --green-900: #14532d;
+  --green-950: #052e16;
+
+  /* ---- Neutrals ---- */
+  --gray-0: #ffffff;
+  --gray-25: #fcfcfd;
+  --gray-50: #f8faf9;
+  --gray-100: #f1f4f2;
+  --gray-200: #e4e8e5;
+  --gray-300: #d0d6d2;
+  --gray-400: #9ba49e;
+  --gray-500: #626c66;               /* subtle text: ≥4.5:1 even on gray-100 */
+  --gray-600: #525b56;
+  --gray-700: #3a423e;
+  --gray-800: #232a26;
+  --gray-900: #121714;
+
+  /* ---- Semantic roles ---- */
+  --color-bg: var(--gray-50);
+  --color-surface: var(--gray-0);
+  --color-surface-muted: var(--gray-100);
+  --color-surface-brand: var(--green-50);
+  --color-border: var(--gray-200);
+  --color-border-strong: var(--gray-300);
+
+  --color-text: var(--gray-900);
+  --color-text-muted: var(--gray-600);
+  --color-text-subtle: var(--gray-500);
+  --color-text-inverse: var(--gray-0);
+
+  --color-primary: var(--green-400);           /* button fill */
+  --color-primary-hover: var(--green-500);
+  --color-primary-active: var(--green-600);
+  --color-on-primary: var(--green-950);        /* text on light green: 9:1 */
+  --color-primary-soft: var(--green-100);      /* tints, selected rows */
+  --color-primary-softer: var(--green-50);
+  --color-link: var(--green-700);              /* 5.0:1 on white */
+  --color-link-hover: var(--green-800);
+  --color-focus: var(--green-600);             /* focus ring, 3.3:1 non-text */
+  --color-focus-strong: var(--green-700);      /* solid ring, 5:1 on white; keeps contrast on green tints */
+
+  --color-success: #15803d;
+  --color-success-bg: #dcfce7;
+  --color-warning: #92400e;
+  --color-warning-bg: #fef3c7;
+  --color-warning-solid: #f59e0b;
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fee2e2;
+  --color-danger-solid: #dc2626;               /* white text: 4.8:1 */
+  --color-danger-solid-hover: #b91c1c;
+  --color-info: #1d4ed8;
+  --color-info-bg: #dbeafe;
+  --color-neutral: var(--gray-700);
+  --color-neutral-bg: var(--gray-100);
+
+  --color-overlay: rgb(18 23 20 / 0.45);
+
+  /* ---- Typography ---- */
+  --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace;
+
+  --text-xs: 0.75rem;    /* 12 */
+  --text-sm: 0.875rem;   /* 14 */
+  --text-md: 1rem;       /* 16 */
+  --text-lg: 1.125rem;   /* 18 */
+  --text-xl: 1.375rem;   /* 22 */
+  --text-2xl: 1.75rem;   /* 28 */
+  --text-3xl: 2.25rem;   /* 36 */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+
+  /* ---- Spacing (4px base) ---- */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* ---- Radii ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* ---- Shadows (soft, green-tinted neutrals) ---- */
+  --shadow-xs: 0 1px 2px rgb(18 23 20 / 0.05);
+  --shadow-sm: 0 1px 3px rgb(18 23 20 / 0.06), 0 1px 2px rgb(18 23 20 / 0.04);
+  --shadow-md: 0 6px 16px -4px rgb(18 23 20 / 0.08), 0 2px 4px rgb(18 23 20 / 0.04);
+  --shadow-lg: 0 16px 40px -8px rgb(18 23 20 / 0.16), 0 4px 10px rgb(18 23 20 / 0.05);
+  /* White separation ring + solid dark-green ring: ≥3:1 on white and on green tints. */
+  --ring: 0 0 0 2px var(--color-surface), 0 0 0 5px var(--color-focus-strong);
+
+  /* ---- Layout ---- */
+  --container-max: 1200px;
+  --header-height: 64px;
+  --sidebar-width: 248px;
+  --control-height: 44px;
+  --control-height-sm: 44px;
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration: 200ms;
+
+  /* ---- Z-index ---- */
+  --z-base: 1;
+  --z-sticky: 100;
+  --z-dropdown: 200;
+  --z-drawer: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  /*
+   * Breakpoints (mobile-first, min-width). CSS custom properties can't be used inside
+   * @media, so media queries use these literal values: sm 640px, md 768px, lg 1024px, xl 1280px.
+   */
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+}
