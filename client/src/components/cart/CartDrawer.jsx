@@ -8,7 +8,7 @@ import styles from './CartDrawer.module.css';
 
 /** Slide-in cart, opened from the header on any shopper page. */
 export default function CartDrawer() {
-  const { cart, count, subtotal, setQuantity, clear, drawerOpen, closeCart } = useCart();
+  const { cart, count, subtotal, restaurants, setQuantity, clear, drawerOpen, closeCart } = useCart();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const confirm = useConfirm();
@@ -66,18 +66,33 @@ export default function CartDrawer() {
         <>
           <div className={styles.from}>
             <span className={styles.fromLabel}>From</span>
-            <Link to={`/restaurants/${cart.restaurant._id}`} className={styles.fromName}>
-              {cart.restaurant.name}
-            </Link>
+            {restaurants.length > 1 ? (
+              <span className={styles.fromName}>{restaurants.length} restaurants · one order each</span>
+            ) : (
+              <Link to={`/restaurants/${restaurants[0]._id}`} className={styles.fromName}>
+                {restaurants[0].name}
+              </Link>
+            )}
             <Button variant="ghost" size="sm" onClick={clearCart} className={styles.clear}>
               Clear
             </Button>
           </div>
-          <ul className={styles.list}>
-            {cart.items.map((i) => (
-              <CartLine key={i.menuItemId} item={i} onQuantity={(q) => setQuantity(i.menuItemId, q)} />
-            ))}
-          </ul>
+          {restaurants.map((r) => (
+            <section key={r._id} className={styles.group} aria-label={r.name}>
+              {restaurants.length > 1 && (
+                <h3 className={styles.groupName}>
+                  <Link to={`/restaurants/${r._id}`}>{r.name}</Link>
+                </h3>
+              )}
+              <ul className={styles.list}>
+                {cart.items
+                  .filter((i) => i.restaurantId === r._id)
+                  .map((i) => (
+                    <CartLine key={i.menuItemId} item={i} onQuantity={(q) => setQuantity(i.menuItemId, q)} />
+                  ))}
+              </ul>
+            </section>
+          ))}
         </>
       )}
     </Drawer>

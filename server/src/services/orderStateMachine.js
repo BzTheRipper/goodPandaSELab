@@ -1,7 +1,7 @@
 import { FINAL_STATUSES, ORDER_STATUS as S, ROLES } from '../constants.js';
 import { AppError } from '../utils/errors.js';
 
-const { CUSTOMER, OWNER, ADMIN, SYSTEM } = ROLES;
+const { CUSTOMER, OWNER, ADMIN, HUB_OPERATOR, SYSTEM } = ROLES;
 
 // from -> { to: [roles allowed] }. Anything not listed is an invalid transition.
 export const TRANSITIONS = {
@@ -13,34 +13,34 @@ export const TRANSITIONS = {
   },
   [S.ACCEPTED]: {
     [S.PREPARING]: [OWNER],
-    [S.NEEDS_CUSTOMER_CONFIRMATION]: [OWNER],
+    [S.NEEDS_CUSTOMER_CONFIRMATION]: [OWNER, CUSTOMER],
     [S.CANCELLED]: [ADMIN],
   },
   [S.PREPARING]: {
     [S.READY_FOR_DRONE]: [OWNER],
-    [S.NEEDS_CUSTOMER_CONFIRMATION]: [OWNER],
+    [S.NEEDS_CUSTOMER_CONFIRMATION]: [OWNER, CUSTOMER],
     [S.CANCELLED]: [ADMIN],
   },
-  // Returning from confirmation is only allowed to the status recorded in confirmationRequest.previousStatus.
+  // A pause that either party can resolve, depending on who the order is waiting on.
   [S.NEEDS_CUSTOMER_CONFIRMATION]: {
-    [S.PLACED]: [CUSTOMER],
-    [S.ACCEPTED]: [CUSTOMER],
-    [S.PREPARING]: [CUSTOMER],
+    [S.PLACED]: [CUSTOMER, OWNER],
+    [S.ACCEPTED]: [CUSTOMER, OWNER],
+    [S.PREPARING]: [CUSTOMER, OWNER],
     [S.CANCELLED]: [CUSTOMER, OWNER, ADMIN],
   },
   [S.READY_FOR_DRONE]: {
     [S.IN_FLIGHT]: [OWNER],
-    [S.CANCELLED]: [ADMIN],
+    [S.CANCELLED]: [ADMIN, HUB_OPERATOR],
   },
   [S.IN_FLIGHT]: {
     [S.ARRIVED_AT_HUB]: [SYSTEM],
     // Admin recovery after a drone failure: send the order back so the owner can re-dispatch.
-    [S.READY_FOR_DRONE]: [ADMIN],
-    [S.CANCELLED]: [ADMIN],
+    [S.READY_FOR_DRONE]: [ADMIN, HUB_OPERATOR],
+    [S.CANCELLED]: [ADMIN, HUB_OPERATOR],
   },
   [S.ARRIVED_AT_HUB]: {
-    [S.COLLECTED]: [ADMIN],
-    [S.CANCELLED]: [ADMIN],
+    [S.COLLECTED]: [ADMIN, HUB_OPERATOR],
+    [S.CANCELLED]: [ADMIN, HUB_OPERATOR],
   },
 };
 
@@ -52,6 +52,9 @@ const ownerMayCancelAfterAgreement = (order, to, role) =>
   to === S.CANCELLED &&
   [S.ACCEPTED, S.PREPARING].includes(order.status) &&
   order.confirmationRequest?.resolution === 'CONTINUED';
+
+/** Who is expected to act on a paused order. Old documents default to the customer. */
+export const awaitingPartyOf = (order) => order.confirmationRequest?.awaiting || 'CUSTOMER';
 
 /** Throws an AppError (409 invalid transition / 403 role not allowed) if the transition is not permitted. */
 export function assertTransition(order, to, role) {
@@ -65,13 +68,23 @@ export function assertTransition(order, to, role) {
   if (!allowedRoles) {
     throw new AppError(409, `Cannot change order from ${from} to ${to}`, 'INVALID_TRANSITION');
   }
-  if (from === S.NEEDS_CUSTOMER_CONFIRMATION && to !== S.CANCELLED && to !== order.confirmationRequest?.previousStatus) {
-    throw new AppError(409, `Order can only resume to ${order.confirmationRequest?.previousStatus}`, 'INVALID_TRANSITION');
+  if (from === S.NEEDS_CUSTOMER_CONFIRMATION && to !== S.CANCELLED) {
+    const previous = order.confirmationRequest?.previousStatus;
+    if (to !== previous) {
+      throw new AppError(409, `Order can only resume to ${previous}`, 'INVALID_TRANSITION');
+    }
+    // Only the party the order is waiting on may resume it.
+    if (to !== S.CANCELLED && awaitingPartyOf(order) !== 'OWNER' && role !== CUSTOMER && role !== ADMIN) {
+      throw new AppError(403, 'The customer needs to respond to this request', 'TRANSITION_FORBIDDEN');
+    }
+    if (awaitingPartyOf(order) === 'OWNER' && role !== OWNER && role !== ADMIN) {
+      throw new AppError(403, 'The restaurant needs to respond to this request', 'TRANSITION_FORBIDDEN');
+    }
   }
   if (!allowedRoles.includes(role)) {
     const hint =
       role === CUSTOMER && to === S.CANCELLED
-        ? 'You can only cancel before the restaurant accepts the order. After that, use the order chat.'
+        ? 'You can cancel only before the restaurant accepts. After that, ask the restaurant to cancel.'
         : `A ${role} cannot move an order from ${from} to ${to}`;
     throw new AppError(403, hint, 'TRANSITION_FORBIDDEN');
   }

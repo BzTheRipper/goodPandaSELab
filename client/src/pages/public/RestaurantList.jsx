@@ -129,6 +129,8 @@ export default function RestaurantList() {
   const canSave = user?.role === 'customer';
 
   const all = useAsync(() => restaurantApi.list(), []);
+  // Personalised rail: saved + previously ordered first, top-rated filler for guests.
+  const picks = useAsync(() => restaurantApi.recommended({ limit: 5 }), [user?._id]);
   const results = useAsync(
     () =>
       queried
@@ -209,6 +211,33 @@ export default function RestaurantList() {
             </Chip>
           ))}
         </div>
+      )}
+
+      {!queried && !savedOnly && picks.data?.length > 0 && (
+        <section aria-labelledby="picks-title">
+          <div className={styles.resultsHead}>
+            <h2 id="picks-title" className={styles.resultsTitle}>
+              Picked for you
+            </h2>
+            <span className={styles.count}>{canSave ? 'From your saved and past orders' : 'Top rated and open now'}</span>
+          </div>
+          <ul className={styles.picks}>
+            {picks.data.map((r) => (
+              <li key={r._id}>
+                <Card to={`/restaurants/${r._id}`} padding="none" className={styles.pick}>
+                  <Media src={assetUrl(r.coverUrl)} ratio="4 / 3" icon="store" iconSize={28} />
+                  <div className={styles.pickBody}>
+                    <strong className={styles.pickName}>{r.name}</strong>
+                    <span className={styles.pickReason}>
+                      {r.reason === 'saved' ? 'Saved' : r.reason === 'ordered' ? 'Ordered before' : 'Top rated'}
+                      {r.ratingCount > 0 && ` · ★ ${Number(r.ratingAvg).toFixed(1)}`}
+                    </span>
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <section aria-labelledby="results-title" aria-busy={loading}>

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import PageHeader from '../../components/layout/PageHeader.jsx';
 import { Button, Field, Input, Select, StatusPill, Table } from '../../components/ui/index.js';
@@ -12,10 +13,14 @@ export default function AdminOrders() {
   const status = params.get('status') || '';
   const needsIntervention = params.get('needsIntervention') === 'true' ? 'true' : '';
   const query = params.get('q') || '';
-  const { orders, loading, error, reload } = useOrderList({
-    ...(status && { status }),
-    ...(needsIntervention && { needsIntervention }),
-  });
+  const { orders, total, pages, page, loading, error, reload, loadMore } = useOrderList(
+    {
+      ...(status && { status }),
+      ...(needsIntervention && { needsIntervention }),
+      ...(query.trim() && { q: query.trim() }),
+    },
+    { pageSize: 25 }
+  );
 
   const update = (key, value) => {
     const next = new URLSearchParams(params);
@@ -23,16 +28,22 @@ export default function AdminOrders() {
     else next.delete(key);
     setParams(next, { replace: true });
   };
-  const clear = () => setParams(new URLSearchParams(), { replace: true });
-  const filtered = query.trim()
-    ? orders.filter((o) =>
-        [o._id, shortId(o._id), shortId(o._id).slice(1), o.restaurant?.name, o.customer?.name, o.hub?.name].some((v) =>
-          String(v || '')
-            .toLowerCase()
-            .includes(query.trim().toLowerCase()),
-        ),
-      )
-    : orders;
+
+  // Debounce the search box so typing doesn't fire a request per keystroke.
+  const [term, setTerm] = useState(query);
+  useEffect(() => setTerm(query), [query]);
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      if (term.trim() === query.trim()) return;
+      update('q', term.trim());
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [term]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const clear = () => {
+    setTerm('');
+    setParams(new URLSearchParams(), { replace: true });
+  };
   const hasFilters = Boolean(status || needsIntervention || query);
 
   const columns = [
@@ -102,7 +113,7 @@ export default function AdminOrders() {
       <PageHeader
         title="Orders"
         subtitle="Every order across all restaurants, with live status updates."
-        hint="Status and intervention filters are saved in the URL. Search matches order IDs, restaurants, customers and hubs."
+        hint="Status, priority and search run on the server, so they cover the whole order history. Search matches order IDs, restaurants, customers and hubs."
         actions={
           hasFilters && (
             <Button variant="ghost" icon="x" onClick={clear}>
@@ -117,10 +128,10 @@ export default function AdminOrders() {
           <Input
             type="search"
             icon="search"
-            value={query}
+            value={term}
             placeholder="Order, restaurant, customer or hub"
             aria-label="Search orders"
-            onChange={(e) => update('q', e.target.value)}
+            onChange={(e) => setTerm(e.target.value)}
           />
         </Field>
         <Field label="Status" className={styles.filter}>
@@ -143,25 +154,40 @@ export default function AdminOrders() {
             <option value="true">Needs intervention</option>
           </Select>
         </Field>
-        <span className={styles.count}>{filtered.length} shown</span>
+        <span className={styles.count}>
+          {orders.length} of {total}
+        </span>
       </div>
 
       <AdminContent
-        loading={loading}
+        loading={loading && orders.length === 0}
         hasData={orders.length > 0}
         error={error}
         onRetry={reload}
         skeletonRows={6}
         empty={{ title: 'No orders yet', icon: 'receipt' }}
       >
-        {filtered.length === 0 ? (
+        {orders.length === 0 ? (
           <AdminEmpty icon="search" title="No matching orders">
             Try a different status or search term.
           </AdminEmpty>
         ) : (
-          <Table columns={columns} rows={filtered} rowTo={(o) => `/orders/${o._id}`} caption="Orders" />
+          <>
+            <Table columns={columns} rows={orders} rowTo={(o) => `/orders/${o._id}`} caption="Orders" />
+            {page < pages && (
+              <div className={styles.loadMore}>
+                <Button variant="secondary" iconRight="chevronDown" onClick={loadMore} loading={loading}>
+                  Load more orders
+                </Button>
+                <span className={styles.count}>
+                  Page {page} of {pages}
+                </span>
+              </div>
+            )}
+          </>
         )}
       </AdminContent>
     </div>
   );
 }
+

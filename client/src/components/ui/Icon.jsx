@@ -243,6 +243,48 @@ const PATHS = {
       <path d="m7 21-3-3 3-3" />
     </>
   ),
+  batteryCharging: (
+    <>
+      <rect x="2" y="7" width="15" height="10" rx="2.5" />
+      <path d="M20.5 10.5v3" />
+      <path d="m9.5 9 -2 4h3.5l-2 4" />
+    </>
+  ),
+  navigation: <path d="M21 3 3 10.5l7.5 3L13.5 21 21 3Z" />,
+  printer: (
+    <>
+      <path d="M7 8V3h10v5" />
+      <rect x="3" y="8" width="18" height="9" rx="2" />
+      <path d="M7 14h10v7H7z" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M4 20h16" />
+    </>
+  ),
+  arrowLeft: (
+    <>
+      <path d="M20 12H4" />
+      <path d="m10 6-6 6 6 6" />
+    </>
+  ),
+  history: (
+    <>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+      <path d="M3.5 3.5v5h5" />
+      <path d="M12 8v4.5l3 1.8" />
+    </>
+  ),
+  clockAlert: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5.5" />
+      <path d="M12 16.5h.01" />
+    </>
+  ),
 };
 
 /** Inline stroke icon. Decorative by default; pass `label` to expose it to assistive tech. */

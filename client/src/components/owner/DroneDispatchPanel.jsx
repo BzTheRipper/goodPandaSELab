@@ -15,7 +15,7 @@ import {
   useToast,
 } from '../ui/index.js';
 import { useAction, useAsync } from '../../hooks/useAsync.js';
-import { droneSuitability, tripBatteryEstimate } from '../../utils/drone.js';
+import { droneSuitability, orderUnits, tripBatteryEstimate } from '../../utils/drone.js';
 import styles from './DroneDispatchPanel.module.css';
 
 const cx = (...c) => c.filter(Boolean).join(' ');
@@ -35,7 +35,8 @@ export default function DroneDispatchPanel({ order, onChange }) {
   const { busy, error: actionError, run } = useAction();
   const toast = useToast();
   const confirm = useConfirm();
-  const needed = tripBatteryEstimate(order.restaurant?.location, order.hub?.location);
+  const needed = tripBatteryEstimate(order.drone || null, order);
+  const units = orderUnits(order);
 
   useEffect(() => {
     if (selected && !drones.some((d) => d._id === selected)) setSelected('');
@@ -115,22 +116,28 @@ export default function DroneDispatchPanel({ order, onChange }) {
     <Card as="section" className={styles.card}>
       <CardHeader
         title="Drone dispatch"
-        hint="Choose an idle drone with enough charge for this route, attach the food, then dispatch."
+        hint="Choose an available drone that can carry this order and reach the hub, attach the food, then dispatch."
         actions={
           <>
             {needed != null && (
               <InfoTooltip
                 label="Battery needed for this trip"
-                content={`About ${needed}% battery is needed to reach ${order.hub?.name || 'the hub'}. Only drones with enough charge can be picked.`}
+                content={`About ${needed}% battery is needed to fly from the drone to your restaurant and on to ${order.hub?.name || 'the hub'}. Drones are checked again when you attach the food.`}
               />
             )}
             <InfoTooltip
               label="How drone loading works"
-              content="Only idle drones are listed. A drone must also have enough battery for the trip; the server checks again when you attach it."
+              content="Only idle or charging drones are listed, and each must have the capacity and charge for this order. The server re-checks both when you attach the food."
             />
           </>
         }
       />
+
+      <p className={styles.tripLine}>
+        <Icon name="drone" size={14} />
+        This order needs room for <strong>{units}</strong> item{units === 1 ? '' : 's'}
+        {needed != null && <> and about <strong>{needed}%</strong> battery</>}.
+      </p>
 
       {loading && (
         <div className={styles.skeletonList} aria-busy="true" aria-label="Checking available drones">

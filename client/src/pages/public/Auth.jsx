@@ -17,6 +17,9 @@ import {
   useToast,
 } from '../../components/ui/index.js';
 import { homeFor, useAuth } from '../../context/AuthContext.jsx';
+import NotificationPrefs from '../../components/profile/NotificationPrefs.jsx';
+import AccountPrivacy from '../../components/profile/AccountPrivacy.jsx';
+import Referrals from '../../components/profile/Referrals.jsx';
 import { useAction } from '../../hooks/useAsync.js';
 import styles from './Auth.module.css';
 
@@ -349,6 +352,9 @@ export function Profile() {
         </form>
       </Card>
       <ChangePassword />
+      <NotificationPrefs />
+      <AccountPrivacy />
+      {user?.role === 'customer' && <Referrals />}
     </div>
   );
 }

@@ -184,7 +184,9 @@ describe('order lifecycle', () => {
       return r.body.status === 'ARRIVED_AT_HUB' && r.body;
     });
     expect(arrived.pickupCode).toMatch(/^\d{6}$/);
-    expect((await Drone.findById(drone._id)).status).toBe('IDLE');
+    // The drone is released from the order on drop-off; it then flies the empty return leg.
+    await waitFor(async () => !(await Drone.findById(drone._id)).currentOrder);
+    expect(arrived.estimatedArrivalAt).toBeTruthy();
 
     const ownerView = await api().get(`/api/orders/${id}`).set(as('owner1'));
     expect(ownerView.body.pickupCode).toBeUndefined();

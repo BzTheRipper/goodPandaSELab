@@ -2,18 +2,32 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 const CartContext = createContext(null);
 const KEY = 'gp_cart';
-const empty = { restaurant: null, items: [], customerNote: '' };
+const empty = { items: [], customerNote: '' };
 export const MAX_QUANTITY = 50;
 
+/** Reads the stored cart and upgrades the old single-restaurant shape in place. */
 const load = () => {
   try {
-    return JSON.parse(localStorage.getItem(KEY)) || empty;
+    const stored = JSON.parse(localStorage.getItem(KEY));
+    if (!stored || !Array.isArray(stored.items)) return empty;
+    const legacy = stored.restaurant;
+    const items = stored.items
+      .filter((i) => i && i.menuItemId)
+      .map((i) => ({
+        ...i,
+        restaurantId: i.restaurantId || legacy?._id || '',
+        restaurantName: i.restaurantName || legacy?.name || '',
+      }));
+    return { items, customerNote: stored.customerNote || '' };
   } catch {
     return empty;
   }
 };
 
-/** Client-side cart, limited to one restaurant. Prices here are for display only; the server recalculates. */
+/**
+ * Client-side cart. It may hold items from several restaurants; checkout splits them into one
+ * order per restaurant. Prices here are for display only — the server recalculates everything.
+ */
 export function CartProvider({ children }) {
   const [cart, setCart] = useState(load);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -27,24 +41,43 @@ export function CartProvider({ children }) {
     const updateItem = (menuItemId, patch) =>
       setCart((c) => ({ ...c, items: c.items.map((i) => (i.menuItemId === menuItemId ? { ...i, ...patch } : i)) }));
 
+    const restaurants = [
+      ...new Map(cart.items.map((i) => [i.restaurantId, i.restaurantName])).entries(),
+    ].map(([id, name]) => ({ _id: id, name }));
+
     return {
       cart,
+      // Kept for screens that are still single-restaurant (a cart with one restaurant, or none).
+      restaurant: restaurants.length === 1 ? restaurants[0] : null,
+      restaurants,
       count: cart.items.reduce((n, i) => n + i.quantity, 0),
       subtotal: cart.items.reduce((s, i) => s + i.price * i.quantity, 0),
       quantityOf: (menuItemId) => cart.items.find((i) => i.menuItemId === menuItemId)?.quantity || 0,
-      /** True when adding from `restaurantId` would replace a cart from another restaurant. */
-      conflictsWith: (restaurantId) => Boolean(cart.restaurant && cart.restaurant._id !== restaurantId && cart.items.length),
-      /** Returns false when the item belongs to another restaurant and the caller didn't confirm replacing the cart. */
+      countForRestaurant: (restaurantId) =>
+        cart.items.filter((i) => i.restaurantId === restaurantId).reduce((n, i) => n + i.quantity, 0),
+      subtotalForRestaurant: (restaurantId) =>
+        cart.items.filter((i) => i.restaurantId === restaurantId).reduce((s, i) => s + i.price * i.quantity, 0),
+      /** Adds an item. `replace` clears the cart first (used by "start a new cart"). */
       addItem(restaurant, item, { replace = false } = {}) {
-        if (cart.restaurant && cart.restaurant._id !== restaurant._id && !replace) return false;
         setCart((c) => {
-          const base = c.restaurant?._id === restaurant._id ? c : { ...empty, restaurant: { _id: restaurant._id, name: restaurant.name } };
+          const base = replace ? { ...empty } : c;
           const existing = base.items.find((i) => i.menuItemId === item._id);
           const items = existing
-            ? base.items.map((i) => (i.menuItemId === item._id ? { ...i, quantity: Math.min(MAX_QUANTITY, i.quantity + 1) } : i))
+            ? base.items.map((i) =>
+                i.menuItemId === item._id ? { ...i, quantity: Math.min(MAX_QUANTITY, i.quantity + 1) } : i
+              )
             : [
                 ...base.items,
-                { menuItemId: item._id, name: item.name, price: item.price, imageUrl: item.imageUrl || '', quantity: 1, note: '' },
+                {
+                  menuItemId: item._id,
+                  restaurantId: restaurant._id,
+                  restaurantName: restaurant.name,
+                  name: item.name,
+                  price: item.price,
+                  imageUrl: item.imageUrl || '',
+                  quantity: 1,
+                  note: '',
+                },
               ];
           return { ...base, items };
         });
@@ -54,9 +87,10 @@ export function CartProvider({ children }) {
       fillCart: (restaurant, lines) =>
         setCart({
           ...empty,
-          restaurant: { _id: restaurant._id, name: restaurant.name },
           items: lines.map(({ item, quantity, note = '' }) => ({
             menuItemId: item._id,
+            restaurantId: restaurant._id,
+            restaurantName: restaurant.name,
             name: item.name,
             price: item.price,
             imageUrl: item.imageUrl || '',
@@ -68,7 +102,7 @@ export function CartProvider({ children }) {
         quantity < 1
           ? setCart((c) => {
               const items = c.items.filter((i) => i.menuItemId !== id);
-              return items.length ? { ...c, items } : empty;
+              return { ...c, items };
             })
           : updateItem(id, { quantity: Math.min(MAX_QUANTITY, quantity) }),
       setItemNote: (id, note) => updateItem(id, { note }),

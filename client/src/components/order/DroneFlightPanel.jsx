@@ -1,4 +1,5 @@
 import { Badge, Card, CardHeader, Icon, InfoTooltip, StatusPill } from '../ui/index.js';
+import LiveMap from './LiveMap.jsx';
 import styles from './DroneFlightPanel.module.css';
 
 const cx = (...c) => c.filter(Boolean).join(' ');
@@ -19,13 +20,25 @@ function locationProgress(from, to, point) {
 }
 
 function etaLabel(seconds) {
-  if (seconds == null) return 'Estimating…';
+  if (seconds == null) return null;
   if (seconds <= 0) return 'Arriving now';
   if (seconds < 60) return `~${seconds} sec`;
-  return `~${Math.ceil(seconds / 60)} min`;
+  const minutes = Math.ceil(seconds / 60);
+  return `~${minutes} min`;
 }
 
-/** Map-less live flight panel: drone identity, battery and an animated restaurant → hub route. */
+/** Minutes until the promised arrival, from the timestamp the server stored at dispatch. */
+function promisedLabel(etaAt) {
+  if (!etaAt) return null;
+  const seconds = Math.round((new Date(etaAt).getTime() - Date.now()) / 1000);
+  if (seconds <= 0) return 'Arriving now';
+  if (seconds < 60) return `in ${seconds} sec`;
+  return `in ${Math.ceil(seconds / 60)} min`;
+}
+
+const timeOf = (d) => (d ? new Date(d).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : null);
+
+/** Map-less live flight panel: drone identity, battery, promise and an animated restaurant → hub route. */
 export default function DroneFlightPanel({ order, telemetry, role = 'customer' }) {
   if (!STAGES.includes(order.status)) return null;
 
@@ -44,7 +57,13 @@ export default function DroneFlightPanel({ order, telemetry, role = 'customer' }
       telemetry?.progress ?? locationProgress(order.restaurant?.location, order.hub?.location, telemetry?.location || drone?.location);
   }
   const pct = Math.round(clamp(progress) * 100);
-  const eta = inFlight ? etaLabel(telemetry?.etaSeconds) : null;
+
+  // Live telemetry wins; the stored promise is the fallback so the ETA survives a page reload.
+  const liveEta = inFlight ? etaLabel(telemetry?.etaSeconds) : null;
+  const promised = inFlight ? promisedLabel(order.estimatedArrivalAt) : null;
+  const eta = liveEta || promised;
+  const promisedTime = timeOf(order.estimatedArrivalAt);
+  const arrivedTime = timeOf(order.arrivedAt);
 
   return (
     <Card as="section" className={styles.card}>
@@ -76,6 +95,27 @@ export default function DroneFlightPanel({ order, telemetry, role = 'customer' }
         }
       />
 
+      {inFlight && eta && (
+        <div className={styles.etaBanner} role="status">
+          <Icon name="clock" size={18} />
+          <span>
+            {forCustomer ? 'Your food arrives ' : 'Arrives '}
+            <strong>{eta}</strong>
+            {promisedTime && <span className={styles.etaClock}> · expected by {promisedTime}</span>}
+          </span>
+        </div>
+      )}
+
+      {arrived && (
+        <div className={cx(styles.etaBanner, styles.etaArrived)} role="status">
+          <Icon name="checkCircle" size={18} />
+          <span>
+            {forCustomer ? 'Your food is waiting at the hub' : 'Food is at the hub'}
+            {arrivedTime && <span className={styles.etaClock}> · landed {arrivedTime}</span>}
+          </span>
+        </div>
+      )}
+
       <div className={styles.meta}>
         <div className={styles.identity}>
           <span className={styles.droneIcon}>
@@ -106,50 +146,29 @@ export default function DroneFlightPanel({ order, telemetry, role = 'customer' }
         )}
       </div>
 
-      <div className={styles.route}>
-        <div className={styles.routeLabels}>
-          <span className={styles.routeEnd}>
-            <span className={styles.routeKicker}>From</span>
-            <span className={styles.routeName}>{order.restaurant?.name || 'Restaurant'}</span>
-          </span>
-          <span className={cx(styles.routeEnd, styles.routeEndRight)}>
-            <span className={styles.routeKicker}>To</span>
-            <span className={styles.routeName}>{order.hub?.name || 'Pickup hub'}</span>
-          </span>
-        </div>
+      <LiveMap restaurant={order.restaurant} hub={order.hub} droneLocation={telemetry?.location || drone?.location} />
 
-        <div className={styles.track}>
-          <span className={styles.line} aria-hidden="true" />
-          <span className={styles.lineFill} style={{ width: `${pct}%` }} aria-hidden="true" />
-          <span className={cx(styles.node, styles.startNode)} aria-hidden="true">
-            <Icon name="store" size={12} />
-          </span>
-          <span className={cx(styles.node, styles.endNode)} aria-hidden="true">
-            <Icon name="mapPin" size={12} />
-          </span>
-          {drone && (
-            <span
-              className={cx(styles.droneMarker, inFlight && styles.flying)}
-              style={{ left: `${pct}%` }}
-              role="img"
-              aria-label={`Drone ${drone.identifier}`}
-            >
-              <Icon name="drone" size={19} />
-            </span>
-          )}
-        </div>
+      <div className={styles.routeLabels}>
+        <span className={styles.routeEnd}>
+          <span className={styles.routeKicker}>From</span>
+          <span className={styles.routeName}>{order.restaurant?.name || 'Restaurant'}</span>
+        </span>
+        <span className={cx(styles.routeEnd, styles.routeEndRight)}>
+          <span className={styles.routeKicker}>To</span>
+          <span className={styles.routeName}>{order.hub?.name || 'Pickup hub'}</span>
+        </span>
+      </div>
 
-        <div className={styles.routeFoot}>
+      <div className={styles.routeFoot}>
           <span className={styles.progressText}>
             {ready && !drone && 'Waiting for a drone'}
             {ready && drone && 'Ready to take off'}
             {inFlight && `${pct}% of the way`}
             {arrived && 'Landed at the hub'}
           </span>
-          {inFlight && <span className={styles.eta}>ETA {eta}</span>}
+          {inFlight && eta && <span className={styles.eta}>ETA {eta}</span>}
           {arrived && <span className={styles.arrivedText}>{forCustomer ? 'Your food is here' : 'Food is at the hub'}</span>}
         </div>
-      </div>
 
       {!drone && (
         <div className={styles.waiting}>

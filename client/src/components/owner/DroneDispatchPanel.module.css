@@ -4,6 +4,18 @@
   gap: var(--space-4);
 }
 
+/* What this particular order needs from a drone. */
+.tripLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.tripLine strong { color: var(--color-text); font-variant-numeric: tabular-nums; }
+
 .skeletonList {
   display: flex;
   flex-direction: column;

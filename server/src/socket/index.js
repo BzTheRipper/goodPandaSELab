@@ -19,17 +19,21 @@ export function initSocket(httpServer) {
   io.on('connection', (socket) => {
     const user = socket.data.user;
     socket.join(rooms.user(user._id));
+    // Admins get the platform-wide feed. Hub operators are staff too, but scoped to their hub —
+    // they must never receive other hubs' orders, chats or telemetry.
     if (user.role === 'admin') socket.join(rooms.admins);
+    if (user.role === 'hub_operator' && user.hub) socket.join(rooms.hub(user.hub));
 
     // Only the order's customer, the restaurant owner, or an admin may join an order room.
-    socket.on('order:join', async (orderId, ack = () => {}) => {
+    socket.on('order:join', async (orderId, ack) => {
+      const reply = typeof ack === 'function' ? ack : () => {};
       try {
         const order = await loadOrder(orderId);
-        if (!isParticipant(user, order)) return ack({ ok: false, error: 'Forbidden' });
+        if (!isParticipant(user, order)) return reply({ ok: false, error: 'Forbidden' });
         socket.join(rooms.order(orderId));
-        ack({ ok: true });
+        reply({ ok: true });
       } catch {
-        ack({ ok: false, error: 'Order not found' });
+        reply({ ok: false, error: 'Order not found' });
       }
     });
 

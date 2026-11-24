@@ -58,7 +58,7 @@ function BoardSkeleton() {
 
 /** Live board grouped by where each order currently sits. */
 export default function OwnerOrders() {
-  const { orders, loading, error, reload } = useOrderList();
+  const { orders, loading, error, reload } = useOrderList({}, { pageSize: 100 });
   const toast = useToast();
   const [justArrived, setJustArrived] = useState(() => new Set());
   const [overrides, setOverrides] = useState({});

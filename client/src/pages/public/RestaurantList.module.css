@@ -1,5 +1,22 @@
 .page { display: flex; flex-direction: column; gap: var(--space-6); }
 
+/* ---------- Personalised rail ---------- */
+.picks {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(160px, 1fr);
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0 0 var(--space-2);
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+.pick { scroll-snap-align: start; }
+.pickBody { display: flex; flex-direction: column; gap: 2px; padding: var(--space-3); }
+.pickName { overflow: hidden; font-size: var(--text-sm); text-overflow: ellipsis; white-space: nowrap; }
+.pickReason { color: var(--color-text-subtle); font-size: var(--text-xs); }
+
 /* ---------- Hero ---------- */
 .hero {
   display: flex;

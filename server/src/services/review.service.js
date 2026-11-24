@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import { ORDER_STATUS, ROLES } from '../constants.js';
-import { Order, Restaurant, Review } from '../models/index.js';
+import { ORDER_STATUS, RESTAURANT_STATUS, ROLES } from '../constants.js';
+import { Order, Restaurant, Review, Hub } from '../models/index.js';
 import { conflict, forbidden, notFound } from '../utils/errors.js';
 import { notify } from './notification.service.js';
 import { getOwned } from './restaurant.service.js';
@@ -29,8 +29,19 @@ async function recompute(restaurantId) {
   );
 }
 
-export async function createForOrder(user, orderId, { rating, comment }) {
-  const order = await Order.findById(orderId).populate('restaurant', 'name owner');
+async function recomputeHub(hubId) {
+  const [stats] = await Review.aggregate([
+    { $match: { hub: new mongoose.Types.ObjectId(String(hubId)), hubRating: { $ne: null } } },
+    { $group: { _id: null, avg: { $avg: '$hubRating' }, count: { $sum: 1 } } },
+  ]);
+  await Hub.updateOne(
+    { _id: hubId },
+    { ratingAvg: stats ? Math.round(stats.avg * 10) / 10 : 0, ratingCount: stats?.count || 0 }
+  );
+}
+
+export async function createForOrder(user, orderId, { rating, hubRating, droneRating, comment }) {
+  const order = await Order.findById(orderId).populate('restaurant', 'name owner').populate('hub', 'name');
   if (!order) throw notFound('Order');
   if (user.role !== ROLES.CUSTOMER || String(order.customer) !== String(user._id)) {
     throw forbidden('This order does not belong to you');
@@ -43,11 +54,15 @@ export async function createForOrder(user, orderId, { rating, comment }) {
     restaurant: order.restaurant._id,
     customer: user._id,
     rating,
+    hubRating: hubRating ?? null,
+    droneRating: droneRating ?? null,
+    hub: order.hub?._id ?? null,
     comment,
   });
   // updateOne keeps the order's optimistic-concurrency version untouched.
   await Order.updateOne({ _id: order._id }, { review: review._id });
   await recompute(order.restaurant._id);
+  if (order.hub && hubRating) await recomputeHub(order.hub._id);
   await notify(order.restaurant.owner, {
     type: 'NEW_REVIEW',
     title: `New ${rating}-star review (#${String(order._id).slice(-6)})`,
@@ -59,6 +74,9 @@ export async function createForOrder(user, orderId, { rating, comment }) {
 }
 
 export async function listForRestaurant(restaurantId, { limit = 20 } = {}) {
+  // Only approved restaurants expose reviews publicly; suspended/pending ones must stay hidden.
+  const visible = await Restaurant.exists({ _id: restaurantId, status: RESTAURANT_STATUS.APPROVED });
+  if (!visible) throw notFound('Restaurant');
   const reviews = await Review.find({ restaurant: restaurantId }).populate('customer', 'name').sort({ createdAt: -1 }).limit(limit);
   return reviews.map(toPublic);
 }

@@ -8,6 +8,10 @@ const reviewSchema = new mongoose.Schema(
     restaurant: { type: ObjectId, ref: 'Restaurant', required: true, index: true },
     customer: { type: ObjectId, ref: 'User', required: true, index: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
+    // The delivery experience, rated separately from the food.
+    hubRating: { type: Number, min: 1, max: 5, default: null },
+    droneRating: { type: Number, min: 1, max: 5, default: null },
+    hub: { type: ObjectId, ref: 'Hub', default: null },
     comment: { type: String, default: '', maxlength: 1000 },
     reply: {
       text: { type: String, maxlength: 1000 },

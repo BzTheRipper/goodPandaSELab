@@ -2,7 +2,7 @@ import { orderApi } from '../../api/index.js';
 import ReasonButton from '../../components/ReasonButton.jsx';
 import DroneDispatchPanel from '../../components/owner/DroneDispatchPanel.jsx';
 import { ConfirmationRequestButtons } from '../../components/owner/ConfirmationRequest.jsx';
-import { Alert, Button, Card, CardHeader, FormError, Icon, InfoTooltip, PhoneLink, useToast } from '../../components/ui/index.js';
+import { Alert, Button, Card, CardHeader, FormError, Icon, InfoTooltip, PhoneLink, useConfirm, useToast } from '../../components/ui/index.js';
 import { useAction } from '../../hooks/useAsync.js';
 import styles from './Actions.module.css';
 
@@ -32,6 +32,58 @@ const NEXT = {
 
 const ACTIVE = ['PLACED', 'ACCEPTED', 'PREPARING', 'NEEDS_CUSTOMER_CONFIRMATION', 'READY_FOR_DRONE'];
 
+/** The customer asked to cancel; the restaurant answers instead of being blocked. */
+function CancelRequestPanel({ order, onChange }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const { busy, error, run } = useAction();
+  const req = order.confirmationRequest;
+
+  const answer = async (decision) => {
+    if (decision === 'CANCEL') {
+      const ok = await confirm({
+        title: 'Cancel this order?',
+        message: 'The order stops here and the customer is told immediately. Nothing is charged.',
+        confirmLabel: 'Cancel order',
+        cancelLabel: 'Keep order',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
+    const updated = await run(() => orderApi.respondCancellation(order._id, decision, decision === 'CONTINUE' ? 'Already being prepared' : undefined));
+    if (updated) {
+      onChange(updated);
+      toast.info(
+        decision === 'CANCEL' ? 'Order cancelled. The customer has been told.' : 'You’re continuing the order. The customer has been told.',
+        { title: 'Request answered' }
+      );
+    }
+  };
+
+  return (
+    <Card as="section" className={styles.card}>
+      <CardHeader title="Cancellation request" hint="The customer asked you to cancel this order after you accepted it." />
+      <Alert tone="warning" title="The customer wants to cancel">
+        “{req.message}”
+      </Alert>
+      <p className={styles.help}>
+        If the food hasn’t started or you can absorb the loss, accept. If it’s already cooking, call or message the customer and
+        continue — the order keeps moving either way.
+      </p>
+      <div className={styles.row}>
+        <Button variant="primary" icon="check" loading={busy} onClick={() => answer('CONTINUE')}>
+          Keep the order going
+        </Button>
+        <Button variant="dangerGhost" icon="x" loading={busy} onClick={() => answer('CANCEL')}>
+          Accept the cancellation
+        </Button>
+        <PhoneLink label="customer" phone={order.customer?.phone} />
+      </div>
+      <FormError error={error} />
+    </Card>
+  );
+}
+
 /** Owner controls on the shared order page. The board uses the same actions in a compact form. */
 export default function OwnerActions({ order, onChange, onChat }) {
   const toast = useToast();
@@ -39,8 +91,11 @@ export default function OwnerActions({ order, onChange, onChat }) {
   const next = NEXT[order.status];
   const agreed = order.confirmationRequest?.resolution === 'CONTINUED';
   const canCancel = order.status === 'NEEDS_CUSTOMER_CONFIRMATION' || (agreed && ['ACCEPTED', 'PREPARING'].includes(order.status));
+  const cancelRequest = order.status === 'NEEDS_CUSTOMER_CONFIRMATION' && order.confirmationRequest?.awaiting === 'OWNER';
 
   if (!ACTIVE.includes(order.status)) return null;
+
+  if (cancelRequest) return <CancelRequestPanel order={order} onChange={onChange} />;
 
   const advance = async () => {
     const updated = await run(() => orderApi.setStatus(order._id, next.status));

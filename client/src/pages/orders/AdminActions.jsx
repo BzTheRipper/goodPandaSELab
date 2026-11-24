@@ -20,7 +20,7 @@ import { money } from '../../utils/format.js';
 import { isFinalOrder } from '../../utils/status.js';
 import styles from './Actions.module.css';
 
-const VALID_CODE = /^\d{4,6}$/;
+const VALID_CODE = /^\d{6}$/;
 
 /** Admin-only tools: hand over an order at the hub, recover a failed flight, or force-cancel. */
 export default function AdminActions({ order, onChange }) {
@@ -40,7 +40,7 @@ export default function AdminActions({ order, onChange }) {
       tone: 'primary',
     });
     if (!ok) return;
-    const updated = await run(() => orderApi.collect(order._id, code.trim()));
+    const updated = await run(() => orderApi.collect(order._id, { pickupCode: code.trim() }));
     if (updated) {
       setCode('');
       onChange(updated);
@@ -48,8 +48,27 @@ export default function AdminActions({ order, onChange }) {
     }
   };
 
-  const returnToReady = async () => {
+  const [noShowBusy, setNoShowBusy] = useState(false);
+
+  const reportNoShow = async () => {
     const ok = await confirm({
+      title: 'Mark as not collected?',
+      message:
+        'Close this order as a no-show. The cash payment is voided, the order is cancelled and the customer’s no-show count goes up.',
+      confirmLabel: 'Mark no-show',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    setNoShowBusy(true);
+    const updated = await run(() => orderApi.reportNoShow(order._id));
+    if (updated) {
+      onChange(updated);
+      toast.info('Order closed as not collected.', { title: 'No-show recorded' });
+    }
+    setNoShowBusy(false);
+  };
+
+  const returnToReady = async () => {    const ok = await confirm({
       title: 'Send the order back to the restaurant?',
       message:
         'Use this when the drone can’t finish the flight. The order returns to “Ready for drone”, the restaurant is told to re-dispatch, and the customer sees the change.',
@@ -96,7 +115,7 @@ export default function AdminActions({ order, onChange }) {
             <Field
               label="Pickup code"
               className={styles.codeField}
-              hint="Ask the customer for the 4–6 digit code on their order page. It is only shown to them."
+              hint="Ask the customer for the 6-digit code on their order page. It is only shown to them."
             >
               <Input
                 className={styles.codeInput}
@@ -119,6 +138,23 @@ export default function AdminActions({ order, onChange }) {
           </span>
           <FormError error={error} />
         </form>
+      )}
+
+      {order.status === 'ARRIVED_AT_HUB' && !order.noShowReportedAt && (
+        <div className={styles.section}>
+          <div className={styles.sectionHead}>
+            <span className={styles.sectionHeadText}>
+              <span className={styles.title}>Customer didn’t collect</span>
+            </span>
+          </div>
+          <p className={styles.kicker}>
+            Close the order as a no-show after the collection window. The cash payment is voided, the order is
+            cancelled and the customer’s no-show count goes up.
+          </p>
+          <Button variant="dangerGhost" icon="alertTriangle" loading={noShowBusy} onClick={reportNoShow}>
+            Mark no-show
+          </Button>
+        </div>
       )}
 
       {order.status === 'IN_FLIGHT' && (

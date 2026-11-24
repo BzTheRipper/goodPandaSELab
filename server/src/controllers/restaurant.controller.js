@@ -10,6 +10,10 @@ export async function detail(req, res) {
   res.json(await restaurantService.getPublic(req.params.id));
 }
 
+export async function recommended(req, res) {
+  res.json(await restaurantService.recommended(req.user, req.validQuery));
+}
+
 // ---- owner: restaurant ----
 export async function getMine(req, res) {
   res.json(await restaurantService.findOwned(req.user._id));
@@ -27,8 +31,21 @@ export async function insights(req, res) {
   res.json(await restaurantService.insights(req.user._id));
 }
 
+export async function earnings(req, res) {
+  res.json(await restaurantService.earningsReport(req.user._id));
+}
+
 export async function setOpen(req, res) {
   res.json(await restaurantService.setOpen(req.user._id, req.body.isOpen));
+}
+
+// ---- owner: compliance documents ----
+export async function addDocument(req, res) {
+  res.status(201).json(await restaurantService.addDocument(req.user._id, req.body, req.file));
+}
+
+export async function removeDocument(req, res) {
+  res.json(await restaurantService.removeDocument(req.user._id, req.params.docId));
 }
 
 // ---- owner: menu ----

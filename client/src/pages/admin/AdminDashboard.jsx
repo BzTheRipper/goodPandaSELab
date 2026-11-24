@@ -32,7 +32,7 @@ function StatCard({ to, icon, value, label, hint, danger, money: isMoney }) {
 
 export default function AdminDashboard() {
   const { data, loading, error, reload } = useAsync(() => adminApi.dashboard(), []);
-  const { orders, loading: ordersLoading, error: ordersError, reload: reloadOrders } = useOrderList();
+  const { orders, loading: ordersLoading, error: ordersError, reload: reloadOrders } = useOrderList({}, { pageSize: 5 });
 
   useSocketEvent('order:updated', reload);
   useSocketEvent('drone:updated', reload);

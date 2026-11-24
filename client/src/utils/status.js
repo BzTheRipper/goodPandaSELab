@@ -10,7 +10,7 @@ export const ORDER_STATUS = {
     label: 'Awaiting confirmation',
     tone: 'warning',
     icon: 'alertTriangle',
-    hint: 'The restaurant flagged a problem (an unavailable item or a request it cannot meet). The customer must continue or cancel.',
+    hint: 'The order is paused for a decision — either the restaurant flagged a problem or the customer asked to cancel.',
   },
   READY_FOR_DRONE: { label: 'Ready for drone', tone: 'brand', icon: 'drone', hint: 'Packed and waiting to be loaded onto a drone.' },
   IN_FLIGHT: { label: 'In flight', tone: 'info', icon: 'drone', live: true, hint: 'A drone is flying the food to the selected hub.' },
@@ -28,6 +28,7 @@ export const ORDER_STATUS = {
 
 export const DRONE_STATUS = {
   IDLE: { label: 'Idle', tone: 'success', icon: 'check', hint: 'Available for a new delivery.' },
+  CHARGING: { label: 'Charging', tone: 'warning', icon: 'batteryCharging', hint: 'Docked and topping up. It rejoins the fleet once charged.' },
   LOADED: { label: 'Loaded', tone: 'brand', icon: 'drone', hint: 'Food is attached; waiting for dispatch.' },
   IN_FLIGHT: { label: 'In flight', tone: 'info', icon: 'drone', live: true, hint: 'Flying to a hub.' },
   MAINTENANCE: { label: 'Maintenance', tone: 'warning', icon: 'settings', hint: 'Out of service until an admin puts it back.' },
@@ -58,3 +59,10 @@ export const ORDER_FLOW = ['PLACED', 'ACCEPTED', 'PREPARING', 'READY_FOR_DRONE',
 export const ORDER_FLOW_INDEX = Object.fromEntries(ORDER_FLOW.map((s, i) => [s, i]));
 export const isAttentionOrder = (s) => s === 'NEEDS_CUSTOMER_CONFIRMATION' || s === 'ARRIVED_AT_HUB';
 
+/** True when the pause is the restaurant's question, i.e. the customer is the one who must answer. */
+export const awaitingCustomer = (order) =>
+  order?.status === 'NEEDS_CUSTOMER_CONFIRMATION' && (order.confirmationRequest?.awaiting || 'CUSTOMER') === 'CUSTOMER';
+
+/** True when the customer asked to cancel and the restaurant must answer. */
+export const awaitingOwner = (order) =>
+  order?.status === 'NEEDS_CUSTOMER_CONFIRMATION' && order.confirmationRequest?.awaiting === 'OWNER';

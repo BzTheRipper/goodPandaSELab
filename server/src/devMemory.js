@@ -1,11 +1,17 @@
 // Runs the API against a throw-away in-memory MongoDB, seeded on every start. Handy when MongoDB isn't installed.
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { SEED_CREDENTIALS, seedDatabase } from './seed/seedData.js';
+import { seedDemoData } from './seed/seedDemo.js';
+import { dockStrandedDrones } from './services/delivery.service.js';
 import { startServer } from './server.js';
 
 const mongo = await MongoMemoryServer.create();
 await startServer({ mongoUri: mongo.getUri('goodpanda') });
-await seedDatabase();
+// DEMO_SEED=true also creates a week of orders/reviews so every screen has data to show.
+if (process.env.DEMO_SEED === 'true') await seedDemoData();
+else await seedDatabase();
+// Seeding happens after startup: dock any drone that starts below the ready charge.
+await dockStrandedDrones();
 console.log('In-memory database seeded (data is lost on exit). Credentials:');
 console.table(SEED_CREDENTIALS);
 

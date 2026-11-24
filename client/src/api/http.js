@@ -84,4 +84,4 @@ export const get = (url, params) => data(http.get(url, { params }));
 export const post = (url, body) => data(http.post(url, body));
 export const patch = (url, body) => data(http.patch(url, body));
 export const put = (url, body) => data(http.put(url, body));
-export const del = (url) => data(http.delete(url));
+export const del = (url, config) => data(http.delete(url, config));

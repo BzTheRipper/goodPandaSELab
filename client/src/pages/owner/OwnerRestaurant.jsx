@@ -21,6 +21,7 @@ import {
   useToast,
 } from '../../components/ui/index.js';
 import { useAction, useAsync } from '../../hooks/useAsync.js';
+import ComplianceDocs from '../../components/owner/ComplianceDocs.jsx';
 import styles from './OwnerRestaurant.module.css';
 
 const toForm = (r) => ({
@@ -307,6 +308,7 @@ export default function OwnerRestaurant() {
           {restaurant && !dirty && <span className={styles.saved}>All changes saved</span>}
         </div>
       </form>
+      {restaurant && <ComplianceDocs />}
     </div>
   );
 }

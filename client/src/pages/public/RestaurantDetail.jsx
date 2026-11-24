@@ -172,7 +172,7 @@ function CategoryNav({ sections }) {
 export default function RestaurantDetail() {
   const { id } = useParams();
   const { user } = useAuth();
-  const { cart, count, subtotal, quantityOf, setQuantity, openCart } = useCart();
+  const { cart, count, quantityOf, setQuantity, openCart, countForRestaurant, subtotalForRestaurant } = useCart();
   const addToCart = useAddToCart();
   const { data, loading, error, reload } = useAsync(() => loadRestaurant(id), [id]);
   const sections = useMemo(() => groupByCategory(data?.menu || []), [data]);
@@ -204,7 +204,9 @@ export default function RestaurantDetail() {
   const { restaurant, menu } = data;
   const shopper = !user || user.role === 'customer';
   const mode = !shopper ? 'view' : restaurant.isOpen ? 'order' : 'closed';
-  const cartHere = shopper && cart.restaurant?._id === restaurant._id && count > 0;
+  const cartHere = shopper && countForRestaurant(restaurant._id) > 0;
+  const hereCount = countForRestaurant(restaurant._id);
+  const hereSubtotal = subtotalForRestaurant(restaurant._id);
 
   const about = (
     <>
@@ -298,9 +300,9 @@ export default function RestaurantDetail() {
       {cartHere && (
         <div className={styles.cartBar}>
           <button type="button" className={styles.cartBarBtn} onClick={openCart} aria-haspopup="dialog">
-            <CountBadge count={count} tone="brand" className={styles.cartBarCount} />
-            <span className={styles.cartBarLabel}>View cart</span>
-            <span className={styles.cartBarTotal}>{money(subtotal)}</span>
+            <CountBadge count={hereCount} tone="brand" className={styles.cartBarCount} />
+            <span className={styles.cartBarLabel}>View cart{count > hereCount ? ` (+${count - hereCount} elsewhere)` : ''}</span>
+            <span className={styles.cartBarTotal}>{money(hereSubtotal)}</span>
           </button>
         </div>
       )}

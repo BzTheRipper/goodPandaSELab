@@ -62,6 +62,28 @@ describe('order state machine', () => {
     expect(code(() => assertTransition(o, 'CANCELLED', 'owner'))).toBeNull();
   });
 
+  it('lets the customer ask the restaurant to cancel after acceptance', () => {
+    expect(code(() => assertTransition(order('ACCEPTED'), 'NEEDS_CUSTOMER_CONFIRMATION', 'customer'))).toBeNull();
+    expect(code(() => assertTransition(order('PREPARING'), 'NEEDS_CUSTOMER_CONFIRMATION', 'customer'))).toBeNull();
+    // Not before acceptance (403: role may not pause a new order), and not once the food is packed (409: no such edge).
+    expect(code(() => assertTransition(order('PLACED'), 'NEEDS_CUSTOMER_CONFIRMATION', 'customer'))).toBe(403);
+    expect(code(() => assertTransition(order('READY_FOR_DRONE'), 'NEEDS_CUSTOMER_CONFIRMATION', 'customer'))).toBe(409);
+  });
+
+  it('only lets the party being waited on resolve a pause', () => {
+    const waitingOnOwner = order('NEEDS_CUSTOMER_CONFIRMATION', {
+      confirmationRequest: { previousStatus: 'ACCEPTED', awaiting: 'OWNER' },
+    });
+    expect(code(() => assertTransition(waitingOnOwner, 'ACCEPTED', 'owner'))).toBeNull();
+    expect(code(() => assertTransition(waitingOnOwner, 'ACCEPTED', 'customer'))).toBe(403);
+
+    const waitingOnCustomer = order('NEEDS_CUSTOMER_CONFIRMATION', {
+      confirmationRequest: { previousStatus: 'ACCEPTED', awaiting: 'CUSTOMER' },
+    });
+    expect(code(() => assertTransition(waitingOnCustomer, 'ACCEPTED', 'customer'))).toBeNull();
+    expect(code(() => assertTransition(waitingOnCustomer, 'ACCEPTED', 'owner'))).toBe(403);
+  });
+
   it('lets the owner cancel only after the customer agreed to continue', () => {
     expect(code(() => assertTransition(order('PREPARING'), 'CANCELLED', 'owner'))).toBe(403);
     const agreed = order('PREPARING', { confirmationRequest: { resolution: 'CONTINUED' } });

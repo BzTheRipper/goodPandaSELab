@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
 import CartDrawer from '../cart/CartDrawer.jsx';
 import { Button, CountBadge, Drawer, Icon, PageLoader } from '../ui/index.js';
+import AnnouncementBanner from './AnnouncementBanner.jsx';
 import Logo from './Logo.jsx';
 import NotificationBell from './NotificationBell.jsx';
 import styles from './Shell.module.css';
@@ -145,6 +146,7 @@ export function PublicLayout() {
         )}
       </header>
       <main id="main" tabIndex={-1} className={`${styles.container} ${styles.page}`}>
+        <AnnouncementBanner />
         <Content />
       </main>
       <footer className={styles.footer}>
@@ -166,6 +168,7 @@ const NAV = {
       ['/owner/orders', 'Orders', 'receipt'],
       ['/owner/menu', 'Menu', 'utensils'],
       ['/owner/insights', 'Insights', 'chart'],
+      ['/owner/earnings', 'Earnings', 'cash'],
       ['/owner/reviews', 'Reviews', 'star'],
       ['/owner', 'My restaurant', 'store'],
     ],
@@ -176,12 +179,27 @@ const NAV = {
     items: [
       ['/admin', 'Dashboard', 'grid'],
       ['/admin/orders', 'Orders', 'receipt'],
+      ['/admin/payouts', 'Payouts', 'cash'],
+      ['/admin/campaigns', 'Campaigns', 'send'],
+      ['/admin/coupons', 'Coupons', 'star'],
+      ['/admin/disputes', 'Disputes', 'alertTriangle'],
       ['/admin/pickup', 'Pickup verify', 'cash'],
       ['/admin/restaurants', 'Restaurants', 'store'],
       ['/admin/users', 'Users', 'users'],
+      ['/admin/hub-staff', 'Hub operators', 'user'],
       ['/admin/hubs', 'Hubs', 'mapPin'],
       ['/admin/drones', 'Drones', 'drone'],
+      ['/admin/audit', 'Audit log', 'history'],
+      ['/admin/fleet-health', 'Fleet health', 'batteryCharging'],
       ['/admin/settings', 'Settings', 'settings'],
+    ],
+  },
+  hub_operator: {
+    label: 'Hub operator',
+    home: '/hub',
+    items: [
+      ['/hub', 'Hub queue', 'inbox'],
+      ['/admin/pickup', 'Pickup verify', 'cash'],
     ],
   },
 };
@@ -240,6 +258,7 @@ export function DashboardLayout() {
           </div>
         </header>
         <main id="main" tabIndex={-1} className={styles.dashContent}>
+          <AnnouncementBanner />
           <Content />
         </main>
       </div>

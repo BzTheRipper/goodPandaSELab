@@ -9,16 +9,27 @@ import { CartProvider } from './context/CartContext.jsx';
 import { SocketProvider } from './context/SocketContext.jsx';
 import './styles/tokens.css';
 import './styles/base.css';
+import { I18nProvider } from './i18n/useI18n.jsx';
+
+// Register the service worker for PWA support (push notifications, offline fallback).
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/sw.js')
+    .then(() => console.log('[pwa] service worker registered'))
+    .catch((err) => console.warn('[pwa] service worker registration failed:', err));
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ToastProvider>
         <ConfirmProvider>
           <AuthProvider>
             <SocketProvider>
               <CartProvider>
-                <App />
+                <I18nProvider>
+                  <App />
+                </I18nProvider>
               </CartProvider>
             </SocketProvider>
           </AuthProvider>

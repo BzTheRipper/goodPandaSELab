@@ -147,9 +147,21 @@ export default function OwnerInsights() {
         <Stat icon="clock" label="Orders today" value={data.ordersToday} hint={`${data.totalOrders} orders all time`} />
         <Stat
           icon="checkCircle"
+          label="Avg. prep time"
+          value={data.prepStats?.averageMinutes == null ? '—' : `${data.prepStats.averageMinutes} min`}
+          hint={`From acceptance to ready · ${data.prepStats?.sampleSize || 0} orders timed`}
+        />
+        <Stat
+          icon="checkCircle"
           label="Completion rate"
           value={data.completionRate === null ? '—' : `${data.completionRate}%`}
           hint="Collected vs. cancelled or rejected"
+        />
+        <Stat
+          icon="drone"
+          label="Avg. flight time"
+          value={data.flightStats?.averageMinutes == null ? '—' : `${data.flightStats.averageMinutes} min`}
+          hint={`From dispatch to arrival · ${data.flightStats?.sampleSize || 0} orders timed`}
         />
       </section>
 
@@ -198,6 +210,28 @@ export default function OwnerInsights() {
               </div>
             ) : (
               <p className={styles.muted}>No reviews yet. Customers can rate an order once they collect it.</p>
+            )}
+          </Card>
+          <Card as="section">
+            <CardHeader title="Rating breakdown" hint="How many customers gave each star rating." />
+            {data.ratingCount ? (
+              <ul className={styles.ratingBreakdown}>
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = (data.ratingDistribution && data.ratingDistribution[String(star)]) || 0;
+                  const pct = data.ratingCount ? Math.round((count / data.ratingCount) * 100) : 0;
+                  return (
+                    <li key={star} className={styles.ratingRow}>
+                      <span className={styles.ratingStar}>{star}★</span>
+                      <span className={styles.ratingBarWrap}>
+                        <span className={styles.ratingBar} style={{ width: `${pct}%` }} />
+                      </span>
+                      <span className={styles.ratingCount}>{count}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className={styles.muted}>No ratings yet.</p>
             )}
           </Card>
           <Card as="section">

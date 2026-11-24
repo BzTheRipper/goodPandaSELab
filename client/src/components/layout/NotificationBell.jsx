@@ -75,6 +75,18 @@ export default function NotificationBell() {
               ))}
             </div>
           )}
+          <div className={styles.panelFoot}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                close();
+                navigate('/notifications');
+              }}
+            >
+              View all notifications
+            </Button>
+          </div>
         </div>
       )}
     </div>

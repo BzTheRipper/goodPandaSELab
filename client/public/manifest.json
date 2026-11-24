@@ -1,0 +1,22 @@
+{
+  "name": "GoodPanda",
+  "short_name": "GoodPanda",
+  "description": "Drone delivery food marketplace - order food delivered by drone to a pickup hub",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4ade80",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "delivery", "shopping"],
+  "lang": "en",
+  "dir": "ltr"
+}

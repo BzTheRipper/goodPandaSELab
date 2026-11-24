@@ -1,5 +1,26 @@
 .card { display: flex; flex-direction: column; gap: var(--space-4); }
 
+/* The promised arrival: the single most important line while the food is in the air. */
+.etaBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--green-200, var(--color-border));
+  border-radius: var(--radius-md);
+  background: var(--color-surface-brand);
+  color: var(--green-950);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+.etaBanner strong { font-variant-numeric: tabular-nums; }
+.etaArrived {
+  border-color: transparent;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+.etaClock { color: var(--color-text-muted); }
+
 .meta {
   display: flex;
   align-items: center;

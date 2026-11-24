@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { errorMessage } from '../../api/http.js';
+import { orderApi } from '../../api/index.js';
 import PageHeader from '../../components/layout/PageHeader.jsx';
+import BrowserNotificationsPrompt from '../../components/order/BrowserNotificationsPrompt.jsx';
 import ConfirmationBanner from '../../components/order/ConfirmationBanner.jsx';
 import DroneFlightPanel from '../../components/order/DroneFlightPanel.jsx';
 import OrderChat from '../../components/order/OrderChat.jsx';
@@ -8,7 +11,8 @@ import OrderJourney from '../../components/order/OrderJourney.jsx';
 import OrderSummaryCard from '../../components/order/OrderSummaryCard.jsx';
 import OwnerOrderBrief from '../../components/owner/OwnerOrderBrief.jsx';
 import PickupCodeCard from '../../components/order/PickupCodeCard.jsx';
-import { Button, Card, CountBadge, Drawer, ErrorState, PhoneLink, Skeleton, useToast } from '../../components/ui/index.js';
+import ReportProblem from '../../components/order/ReportProblem.jsx';
+import { Alert, Button, Card, CountBadge, Drawer, ErrorState, PhoneLink, Skeleton, useToast } from '../../components/ui/index.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useChatUnread } from '../../hooks/useChatUnread.js';
 import { useMediaQuery } from '../../hooks/useMediaQuery.js';
@@ -20,15 +24,49 @@ import CustomerActions from './CustomerActions.jsx';
 import OwnerActions from './OwnerActions.jsx';
 import styles from './OrderPage.module.css';
 
-const ACTIONS = { customer: CustomerActions, owner: OwnerActions, admin: AdminActions };
+const ACTIONS = { customer: CustomerActions, owner: OwnerActions, admin: AdminActions, hub_operator: AdminActions };
 
 const BACK = {
   customer: { to: '/orders', label: 'My orders' },
   owner: { to: '/owner/orders', label: 'Incoming orders' },
   admin: { to: '/admin/orders', label: 'All orders' },
+  hub_operator: { to: '/hub', label: 'Hub queue' },
 };
 
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Unpaid online orders can start (or restart) a Stripe Checkout session from here. */
+function OnlinePaymentBanner({ order }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  if (order.paymentMethod !== 'ONLINE_PAYMENT' || order.paymentStatus !== 'PENDING') return null;
+
+  const pay = async () => {
+    setBusy(true);
+    try {
+      const { url } = await orderApi.paymentLink(order._id);
+      if (url) return window.location.assign(url);
+      toast.error('Payment is not available right now.');
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+    setBusy(false);
+  };
+
+  return (
+    <Alert
+      tone="warning"
+      title="Payment pending"
+      action={
+        <Button size="sm" variant="primary" icon="creditCard" loading={busy} onClick={pay}>
+          Pay now
+        </Button>
+      }
+    >
+      This order is not paid yet. Complete the payment to keep it confirmed.
+    </Alert>
+  );
+}
 
 function OrderSkeleton({ back, withChat }) {
   return (
@@ -88,6 +126,28 @@ export default function OrderPage() {
   const lastStatus = useRef({ id: null, status: null });
   const suppressUntil = useRef(0);
   const [flash, setFlash] = useState(false);
+  const [params, setParams] = useSearchParams();
+
+  // Stripe sends the customer back here; the webhook does the actual state change.
+  useEffect(() => {
+    const result = params.get('payment');
+    if (!result) return undefined;
+    if (result === 'success') {
+      toast.info('Payment received — confirming it now. This page updates automatically.', { title: 'Thanks!' });
+      const timer = window.setTimeout(() => reload(), 1500);
+      const next = new URLSearchParams(params);
+      next.delete('payment');
+      setParams(next, { replace: true });
+      return () => window.clearTimeout(timer);
+    }
+    if (result === 'cancelled') {
+      toast.info('Payment cancelled. You can pay again from this page.');
+      const next = new URLSearchParams(params);
+      next.delete('payment');
+      setParams(next, { replace: true });
+    }
+    return undefined;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const back = BACK[user?.role] || { to: '/', label: 'Home' };
   const match = order && String(order._id) === String(id);
@@ -202,6 +262,8 @@ export default function OrderPage() {
 
   const Actions = ACTIONS[user?.role] || (() => null);
   const itemCount = order.items.reduce((n, i) => n + (i.removed ? 0 : i.quantity), 0);
+  const scheduledForLater =
+    order.status === 'PLACED' && order.scheduledFor && new Date(order.scheduledFor).getTime() > Date.now();
   const contact =
     user?.role === 'customer'
       ? { phone: order.restaurant?.phone, label: 'restaurant' }
@@ -212,7 +274,7 @@ export default function OrderPage() {
       <PageHeader
         back={back}
         title={`Order ${shortId(order._id)}`}
-        subtitle={`${order.restaurant?.name || 'Restaurant'} → ${order.hub?.name || 'Hub'} · ${plural(itemCount, 'item')} · placed ${dateTime(order.createdAt)}`}
+        subtitle={`${order.restaurant?.name || 'Restaurant'} → ${order.hub?.name || 'Hub'} · ${plural(itemCount, 'item')} · placed ${dateTime(order.createdAt)}${order.checkoutGroup ? ' · part of a multi-restaurant order' : ''}`}
         actions={
           <>
             {contact.phone && <PhoneLink label={contact.label} hideNumber phone={contact.phone} className={styles.callLink} />}
@@ -228,6 +290,13 @@ export default function OrderPage() {
 
       <div className={styles.layout}>
         <div className={styles.main}>
+          {scheduledForLater && (
+            <Alert tone="info" title="Scheduled order">
+              This order is held until {dateTime(order.scheduledFor)}. The restaurant receives it then, so it is
+              freshly made when you collect it.
+            </Alert>
+          )}
+          {user?.role === 'customer' && <OnlinePaymentBanner order={order} />}
           <OrderJourney order={order} flash={flash} role={user?.role} />
 
           {user?.role === 'customer' && (
@@ -235,6 +304,10 @@ export default function OrderPage() {
           )}
 
           {user?.role === 'customer' && <PickupCodeCard order={order} onRefresh={reload} />}
+
+          {user?.role === 'customer' && <ReportProblem order={order} />}
+
+          {user?.role === 'customer' && order.status === 'IN_FLIGHT' && <BrowserNotificationsPrompt />}
 
           <DroneFlightPanel order={order} telemetry={telemetry} role={user?.role} />
 

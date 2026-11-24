@@ -3,6 +3,20 @@ import { RESTAURANT_STATUS } from '../constants.js';
 
 const pointSchema = new mongoose.Schema({ lat: Number, lng: Number }, { _id: false });
 
+// Compliance paperwork the owner uploads and an admin verifies. Never exposed publicly.
+const documentSchema = new mongoose.Schema(
+  {
+    type: { type: String, enum: ['FOOD_LICENSE', 'TRADE_LICENSE', 'OWNER_ID', 'OTHER'], required: true },
+    label: { type: String, default: '', trim: true, maxlength: 80 },
+    fileUrl: { type: String, required: true },
+    expiresAt: { type: Date, default: null },
+    verifiedAt: { type: Date, default: null },
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    note: { type: String, default: '', maxlength: 300 },
+  },
+  { timestamps: true }
+);
+
 const restaurantSchema = new mongoose.Schema(
   {
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
@@ -19,6 +33,7 @@ const restaurantSchema = new mongoose.Schema(
     status: { type: String, enum: Object.values(RESTAURANT_STATUS), default: RESTAURANT_STATUS.PENDING },
     ratingAvg: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
+    documents: { type: [documentSchema], default: [] },
   },
   { timestamps: true }
 );

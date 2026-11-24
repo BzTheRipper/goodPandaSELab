@@ -3,11 +3,13 @@ import multer from 'multer';
 import { AppError } from '../utils/errors.js';
 
 export function notFoundHandler(req, res) {
-  res.status(404).json({ error: { message: `Route ${req.method} ${req.originalUrl} not found`, code: 'NOT_FOUND' } });
+  res.status(404).json({
+    error: { message: `Route ${req.method} ${req.originalUrl} not found`, code: 'NOT_FOUND', requestId: req.id },
+  });
 }
 
 // eslint-disable-next-line no-unused-vars
-export function errorHandler(err, _req, res, _next) {
+export function errorHandler(err, req, res, _next) {
   let status = 500;
   let body = { message: 'Internal server error', code: 'INTERNAL' };
 
@@ -38,6 +40,8 @@ export function errorHandler(err, _req, res, _next) {
     body = { message: 'Malformed JSON body', code: 'BAD_REQUEST' };
   }
 
-  if (status === 500) console.error(err);
-  res.status(status).json({ error: body });
+  if (status === 500) console.error(JSON.stringify({ level: 'error', msg: 'unhandled', id: req.id, error: err.message, stack: err.stack }));
+
+  const withId = { ...body, requestId: req.id };
+  res.status(status).json({ error: withId });
 }

@@ -9,6 +9,8 @@ const hubSchema = new mongoose.Schema(
       lng: { type: Number, required: true },
     },
     isActive: { type: Boolean, default: true },
+    ratingAvg: { type: Number, default: 0 },
+    ratingCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -14,8 +14,53 @@ export default function ConfirmationBanner({ order, onChange, onChat, chatUnread
   const { busy, error, run } = useAction();
   const req = order.confirmationRequest;
   const pending = order.status === 'NEEDS_CUSTOMER_CONFIRMATION' && req && !req.resolution;
+  const awaitingOwner = req?.awaiting === 'OWNER';
 
   if (!pending) return null;
+
+  // A cancellation request is a different conversation: show progress, not a decision form.
+  if (awaitingOwner) {
+    return (
+      <Card as="section" className={styles.banner} aria-labelledby={titleId}>
+        <span className={styles.iconWrap} aria-hidden="true">
+          <Icon name="clock" size={22} />
+        </span>
+        <div className={styles.content}>
+          <div className={styles.titleRow}>
+            <h2 id={titleId} className={styles.title}>
+              Cancellation requested
+            </h2>
+            <Badge tone="info" live>
+              With the restaurant
+            </Badge>
+          </div>
+          <blockquote className={styles.message}>“{req.message}”</blockquote>
+          <p className={styles.recalc}>
+            {order.restaurant?.name || 'The restaurant'} is reviewing your request. You’ll be told as soon as they answer; nothing
+            has been charged.
+          </p>
+          <div className={styles.actions}>
+            {order.restaurant?.phone && (
+              <span className={styles.action}>
+                <PhoneLink label="restaurant" hideNumber phone={order.restaurant.phone} className={styles.callBtn} />
+                <InfoTooltip label="Why call the restaurant" content="Calling is the fastest way to sort this out if you need it cancelled urgently." />
+              </span>
+            )}
+            <span className={styles.action}>
+              <Button variant="ghost" icon="message" onClick={onChat} className={styles.chatBtn}>
+                Chat
+                <CountBadge count={chatUnread} tone="brand" />
+              </Button>
+              <InfoTooltip
+                label="Why use chat"
+                content="Discussions stay attached to the order, so the restaurant has the full context when they decide."
+              />
+            </span>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   const unavailable = order.items.filter((i) => i.unavailable && !i.removed);
   const remaining = order.items.filter((i) => !i.removed && !i.unavailable);

@@ -1,5 +1,5 @@
 import { env } from '../config/env.js';
-import { Drone, Hub, MenuItem, Message, Notification, Order, Restaurant, Setting, User } from '../models/index.js';
+import { AuditLog, Campaign, Coupon, Dispute, Drone, Hub, MenuItem, Message, Notification, Order, PushSubscription, Restaurant, Review, Setting, User } from '../models/index.js';
 import { hashPassword } from '../services/auth.service.js';
 
 export const SEED_CREDENTIALS = {
@@ -7,6 +7,7 @@ export const SEED_CREDENTIALS = {
   owner1: { email: 'owner1@goodpanda.test', password: 'owner123' },
   owner2: { email: 'owner2@goodpanda.test', password: 'owner123' },
   customer: { email: 'customer@goodpanda.test', password: 'customer123' },
+  hubOperator: { email: 'hub@goodpanda.test', password: 'hub123' },
 };
 
 const user = async (key, name, role, phone, address = '') => ({
@@ -20,7 +21,9 @@ const user = async (key, name, role, phone, address = '') => ({
 
 /** Wipes all GoodPanda collections and inserts demo data. */
 export async function seedDatabase() {
-  await Promise.all([User, Restaurant, MenuItem, Order, Hub, Drone, Message, Notification, Setting].map((m) => m.deleteMany({})));
+  await Promise.all(
+    [User, Restaurant, MenuItem, Order, Hub, Drone, Message, Notification, Setting, Review, AuditLog, PushSubscription, Coupon, Dispute, Campaign].map((m) => m.deleteMany({}))
+  );
 
   const [, owner1, owner2] = await User.insertMany([
     await user('admin', 'Platform Admin', 'admin', '+8801700000000'),
@@ -73,11 +76,16 @@ export async function seedDatabase() {
     { name: 'Mirpur Drone Hub', address: 'Mirpur 10 Circle, Dhaka', location: { lat: 23.8069, lng: 90.3687 } },
   ]);
 
+  await User.create({
+    ...(await user('hubOperator', 'Hub Operator', 'hub_operator', '+8801744444444')),
+    hub: hubs[0]._id,
+  });
+
   await Drone.insertMany([
-    { identifier: 'GP-DR-01', battery: 100, location: biryani.location },
-    { identifier: 'GP-DR-02', battery: 90, location: greenLeaf.location },
-    { identifier: 'GP-DR-03', battery: 75, location: hubs[0].location },
-    { identifier: 'GP-DR-04', battery: 15, location: hubs[1].location },
+    { identifier: 'GP-DR-01', battery: 100, capacityUnits: 12, location: biryani.location },
+    { identifier: 'GP-DR-02', battery: 90, capacityUnits: 12, location: greenLeaf.location },
+    { identifier: 'GP-DR-03', battery: 75, capacityUnits: 24, location: hubs[0].location },
+    { identifier: 'GP-DR-04', battery: 15, capacityUnits: 6, location: hubs[1].location },
   ]);
 
   await Setting.create({ key: 'deliveryFee', value: env.defaultDeliveryFee });

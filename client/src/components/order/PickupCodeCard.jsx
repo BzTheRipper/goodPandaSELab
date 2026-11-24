@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Alert, Badge, Button, Card, Icon, InfoTooltip, useToast } from '../ui/index.js';
 import { money } from '../../utils/format.js';
 import styles from './PickupCodeCard.module.css';
@@ -105,6 +106,19 @@ export default function PickupCodeCard({ order, onRefresh }) {
         </Button>
       </div>
 
+      {order.pickupToken && (
+        <div className={styles.qrWrap}>
+          <QRCodeSVG
+            value={JSON.stringify({ token: order.pickupToken, order: order._id })}
+            size={132}
+            bgColor="#ffffff"
+            fgColor="#14532d"
+            level="M"
+          />
+          <span className={styles.qrCaption}>Or let the hub scan this QR</span>
+        </div>
+      )}
+
       <div className={styles.hubInfo}>
         <span className={styles.hubIcon}>
           <Icon name="mapPin" size={18} />
@@ -113,6 +127,15 @@ export default function PickupCodeCard({ order, onRefresh }) {
           <div className={styles.hubName}>{order.hub.name}</div>
           <div className={styles.hubAddress}>{order.hub.address}</div>
         </div>
+        <a
+          className={styles.directions}
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${order.hub.name} ${order.hub.address}`)}`}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          <Icon name="navigation" size={14} />
+          Directions
+        </a>
       </div>
 
       <div className={styles.payRow}>

@@ -98,6 +98,15 @@
 .statusCount { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
 .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
 
+.ratingBreakdown { margin: 0; padding: 0; list-style: none; }
+.ratingRow { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--color-border); }
+.ratingRow:first-child { border-top: 0; padding-top: 0; }
+.ratingStar { width: 24px; text-align: center; font-weight: var(--weight-semibold); color: var(--color-text-muted); }
+.ratingBarWrap { flex: 1; min-width: 0; height: 8px; border-radius: var(--radius-full); background: var(--color-surface-muted); overflow: hidden; }
+.ratingBar { height: 100%; background: var(--color-primary); transition: width 200ms var(--ease); }
+.ratingCount { width: 28px; text-align: right; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+
 @media (prefers-reduced-motion: reduce) {
   .bar { transition: none; }
+  .ratingBar { transition: none; }
 }

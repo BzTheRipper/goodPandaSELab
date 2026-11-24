@@ -29,7 +29,7 @@ import { AdminContent } from './AdminShared.jsx';
 import styles from './Admin.module.css';
 
 const HUB_BLANK = { name: '', address: '', lat: '', lng: '', isActive: true };
-const DRONE_BLANK = { identifier: '', battery: '100', lat: '', lng: '', status: 'IDLE' };
+const DRONE_BLANK = { identifier: '', battery: '100', capacityUnits: '12', lat: '', lng: '', status: 'IDLE' };
 const BUSY = new Set(['LOADED', 'IN_FLIGHT']);
 
 function HubModal({ open, hub, onClose, onSaved }) {
@@ -279,6 +279,7 @@ function DroneModal({ open, drone, onClose, onSaved }) {
         ? {
             identifier: drone.identifier || '',
             battery: String(drone.battery ?? 100),
+            capacityUnits: String(drone.capacityUnits ?? 12),
             lat: String(drone.location?.lat ?? ''),
             lng: String(drone.location?.lng ?? ''),
             status: drone.status === 'MAINTENANCE' ? 'MAINTENANCE' : 'IDLE',
@@ -291,6 +292,7 @@ function DroneModal({ open, drone, onClose, onSaved }) {
   const submit = async (e) => {
     e.preventDefault();
     const battery = Number(form.battery);
+    const capacityUnits = Number(form.capacityUnits);
     const hasLat = form.lat !== '';
     const hasLng = form.lng !== '';
     const lat = Number(form.lat);
@@ -304,6 +306,10 @@ function DroneModal({ open, drone, onClose, onSaved }) {
       setFieldError('Battery must be a number between 0 and 100.');
       return;
     }
+    if (!Number.isInteger(capacityUnits) || capacityUnits < 1 || capacityUnits > 200) {
+      setFieldError('Capacity must be a whole number of items between 1 and 200.');
+      return;
+    }
     if (
       hasLat !== hasLng ||
       (hasLat && (!Number.isFinite(lat) || lat < -90 || lat > 90)) ||
@@ -313,7 +319,7 @@ function DroneModal({ open, drone, onClose, onSaved }) {
       return;
     }
 
-    const body = { identifier: form.identifier.trim(), battery };
+    const body = { identifier: form.identifier.trim(), battery, capacityUnits };
     if (hasLat && hasLng && !locked) {
       body.lat = lat;
       body.lng = lng;
@@ -360,8 +366,11 @@ function DroneModal({ open, drone, onClose, onSaved }) {
               autoFocus
             />
           </Field>
-          <Field label="Battery (%)" hint="Drones below the minimum charge are not offered for new deliveries.">
+          <Field label="Battery (%)" hint="Drones below the minimum charge are docked and charged before they are offered again.">
             <Input required type="number" min="0" max="100" step="1" value={form.battery} onChange={set('battery')} />
+          </Field>
+          <Field label="Capacity (items)" hint="The largest order this drone can carry in one trip. Orders with more items need a bigger drone.">
+            <Input required type="number" min="1" max="200" step="1" value={form.capacityUnits} onChange={set('capacityUnits')} />
           </Field>
           <Field label="Latitude" hint="Optional starting position. Both coordinates must be provided together.">
             <Input
@@ -427,6 +436,7 @@ function DroneCard({ drone, busyId, onEdit, onMaintenance, onReturn, onRecharge,
   const orderStatus = drone.currentOrder?.status;
   const level = Math.max(0, Math.min(100, Number(drone.battery ?? 0)));
   const busy = Boolean(busyId);
+  const charging = drone.status === 'CHARGING';
 
   return (
     <Card className={styles.droneCard}>
@@ -467,6 +477,10 @@ function DroneCard({ drone, busyId, onEdit, onMaintenance, onReturn, onRecharge,
           <span className={styles.metaValue}>{coords(drone.location)}</span>
         </div>
         <div className={styles.metaItem}>
+          <span className={styles.metaLabel}>Capacity</span>
+          <span className={styles.metaValue}>{drone.capacityUnits ?? 12} items</span>
+        </div>
+        <div className={styles.metaItem}>
           <span className={styles.metaLabel}>Current order</span>
           <span className={styles.metaValue}>
             {orderId ? (
@@ -492,12 +506,17 @@ function DroneCard({ drone, busyId, onEdit, onMaintenance, onReturn, onRecharge,
             Maintenance
           </Button>
         )}
-        {drone.status === 'MAINTENANCE' && !orderId && (
+        {charging && (
+          <Button size="sm" variant="primary" loading={busyId === 'return'} onClick={onReturn}>
+            Charge to full & use
+          </Button>
+        )}
+        {drone.status === 'MAINTENANCE' && (
           <Button size="sm" variant="primary" loading={busyId === 'return'} onClick={onReturn}>
             Return to service
           </Button>
         )}
-        {level < 100 && (
+        {level < 100 && !charging && (
           <Button size="sm" variant="secondary" icon="refresh" loading={busyId === 'recharge'} onClick={onRecharge}>
             Recharge
           </Button>

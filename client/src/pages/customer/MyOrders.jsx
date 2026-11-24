@@ -127,7 +127,7 @@ function OrderCard({ order, onReorder, reordering }) {
 }
 
 export default function MyOrders() {
-  const { orders, loading, error, reload } = useOrderList();
+  const { orders, total, pages, page, loading, error, reload, loadMore } = useOrderList({}, { pageSize: 40 });
   const toast = useToast();
   const { reorder, busyId } = useReorder();
   const [tab, setTab] = useState('active');
@@ -182,6 +182,7 @@ export default function MyOrders() {
   };
 
   const shown = orders.filter((o) => {
+    // Server-side paging already applied; filters here are view-only.
     if (tab === 'active' && isFinalOrder(o.status)) return false;
     if (tab === 'past' && !isFinalOrder(o.status)) return false;
     return !status || o.status === status;
@@ -308,6 +309,17 @@ export default function MyOrders() {
                   <OrderCard key={o._id} order={o} onReorder={reorder} reordering={busyId === o._id} />
                 ))}
               </ul>
+            )}
+
+            {page < pages && (
+              <div className={styles.more}>
+                <Button variant="secondary" iconRight="chevronDown" onClick={loadMore} disabled={loading}>
+                  Load older orders
+                </Button>
+                <span className={styles.moreCount}>
+                  Showing {shown.length} of {total}
+                </span>
+              </div>
             )}
           </Tabs>
         </>

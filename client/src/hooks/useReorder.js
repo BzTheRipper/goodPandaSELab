@@ -33,7 +33,7 @@ export function useReorder() {
         if (count > 0) {
           const ok = await confirm({
             title: 'Replace your cart?',
-            message: `Your cart already has items from ${cart.restaurant?.name}. Reordering will replace them.`,
+            message: 'Your cart already has items. Reordering will replace them with this order.',
             confirmLabel: 'Replace cart',
             cancelLabel: 'Keep my cart',
             tone: 'primary',
@@ -52,7 +52,7 @@ export function useReorder() {
         setBusyId(null);
       }
     },
-    [cart.restaurant, count, fillCart, openCart, confirm, toast],
+    [count, fillCart, openCart, confirm, toast],
   );
 
   return { reorder, busyId };

@@ -1,16 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { errorCode, errorMessage } from '../../api/http.js';
-import { hubApi, orderApi, restaurantApi } from '../../api/index.js';
+import { couponApi, hubApi, orderApi, restaurantApi, settingsApi } from '../../api/index.js';
 import CartLine from '../../components/cart/CartLine.jsx';
 import PageHeader from '../../components/layout/PageHeader.jsx';
 import {
   Alert,
+  Badge,
   Button,
   Card,
   Chip,
   EmptyState,
   ErrorState,
+  FormError,
   Icon,
   InfoTooltip,
   Input,
@@ -23,11 +25,20 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
 import { useAsync } from '../../hooks/useAsync.js';
 import { money } from '../../utils/format.js';
+import { priceDeliveryFee, routeKm } from '../../utils/drone.js';
 import styles from './Checkout.module.css';
 
 const NOTE_MAX = 500;
 const ITEM_NOTE_MAX = 200;
 const QUICK_NOTES = ['Less spicy', 'Serve hot', 'Serve cold', '0-calorie sugar'];
+// The restaurant needs a little warning; the server rejects past times too.
+const MIN_SCHEDULE_LEAD_MS = 15 * 60 * 1000;
+
+/** `datetime-local` wants "YYYY-MM-DDTHH:mm" in the browser's own timezone. */
+const toLocalInputValue = (date) => {
+  const d = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return d.toISOString().slice(0, 16);
+};
 
 const escapeRx = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const phraseRx = (p) => new RegExp(`(^|,\\s*)${escapeRx(p)}(?=\\s*(,|$))`, 'i');
@@ -145,15 +156,70 @@ export default function Checkout() {
   const { cart, setQuantity, setItemNote, setCustomerNote, clear } = useCart();
   const toast = useToast();
   const navigate = useNavigate();
-  const restaurantId = cart.restaurant?._id;
 
-  const live = useAsync(() => (restaurantId ? loadLive(restaurantId) : Promise.resolve(null)), [restaurantId]);
+  // One order per restaurant, however many restaurants the cart holds.
+  const groups = useMemo(() => {
+    const map = new Map();
+    for (const item of cart.items) {
+      if (!map.has(item.restaurantId)) {
+        map.set(item.restaurantId, { restaurantId: item.restaurantId, restaurantName: item.restaurantName, items: [] });
+      }
+      map.get(item.restaurantId).items.push(item);
+    }
+    return [...map.values()];
+  }, [cart.items]);
+  const groupsKey = groups.map((g) => g.restaurantId).join(',');
+  const single = groups.length === 1;
+  const restaurantId = single ? groups[0].restaurantId : null;
+
+  // Validate every restaurant's menu, in parallel.
+  const live = useAsync(
+    () =>
+      groups.length
+        ? Promise.all(groups.map((g) => loadLive(g.restaurantId).then((data) => ({ restaurantId: g.restaurantId, ...data }))))
+        : Promise.resolve([]),
+    [groupsKey]
+  );
   const hubs = useAsync(() => hubApi.listActive(), []);
+  const pricing = useAsync(() => settingsApi.public(), []);
   const [hubId, setHubId] = useState('');
   const [hubError, setHubError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('CASH_ON_COLLECTION');
+  const [scheduledFor, setScheduledFor] = useState('');
+  const [scheduleError, setScheduleError] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [coupon, setCoupon] = useState(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [useCredit, setUseCredit] = useState(false);
+  const [creditBalance, setCreditBalance] = useState(0);
   const firstHubRef = useRef(null);
+
+  useEffect(() => {
+    const loadCredit = async () => {
+      try {
+        const refs = await authApi.referrals();
+        setCreditBalance(refs.creditBalance || 0);
+      } catch {
+        setCreditBalance(0);
+      }
+    };
+    if (user?.role === 'customer') loadCredit();
+  }, [user?.role]);
+
+  // A coupon is tied to one restaurant's cart; any change to the restaurant mix invalidates it.
+  useEffect(() => {
+    setCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+  }, [groupsKey]);
+
+  // Split orders are cash-only: each restaurant would need its own payment session.
+  useEffect(() => {
+    if (!single) setPaymentMethod('CASH_ON_COLLECTION');
+  }, [single]);
 
   useEffect(() => {
     if (hubId && hubs.data && !hubs.data.some((h) => h._id === hubId)) setHubId('');
@@ -179,45 +245,132 @@ export default function Checkout() {
       </div>
     );
 
-  const liveMenu = live.data?.menu ? new Map(live.data.menu.map((m) => [m._id, m])) : null;
-  const liveRestaurant = live.data?.restaurant;
-  const gone = live.data && !liveRestaurant;
-  const closed = liveRestaurant && !liveRestaurant.isOpen;
+  const liveByRestaurant = new Map((live.data || []).map((d) => [d.restaurantId, d]));
   // Prefer live prices so the summary matches what the server will charge.
-  const lines = cart.items.map((i) => {
-    const m = liveMenu?.get(i.menuItemId);
-    return { ...i, price: m ? m.price : i.price, unavailable: Boolean(liveMenu && !gone && !m) };
+  const grouped = groups.map((group) => {
+    const data = liveByRestaurant.get(group.restaurantId);
+    const menu = data?.menu ? new Map(data.menu.map((m) => [m._id, m])) : null;
+    const gone = Boolean(data) && !data.restaurant;
+    const closed = Boolean(data?.restaurant) && !data.restaurant.isOpen;
+    const lines = group.items.map((item) => {
+      const liveItem = menu?.get(item.menuItemId);
+      return {
+        ...item,
+        price: liveItem ? liveItem.price : item.price,
+        unavailable: Boolean(menu && !gone && !liveItem),
+      };
+    });
+    const unavailableCount = lines.filter((l) => l.unavailable).length;
+    const subtotal = lines.filter((l) => !l.unavailable).reduce((sum, l) => sum + l.price * l.quantity, 0);
+    return { ...group, restaurant: data?.restaurant, gone, closed, lines, unavailableCount, subtotal };
   });
-  const unavailableCount = lines.filter((l) => l.unavailable).length;
-  const orderable = lines.filter((l) => !l.unavailable);
-  const itemCount = orderable.reduce((n, l) => n + l.quantity, 0);
-  const subtotal = orderable.reduce((s, l) => s + l.price * l.quantity, 0);
+
+  const itemCount = grouped.reduce(
+    (n, g) => n + g.lines.filter((l) => !l.unavailable).reduce((m, l) => m + l.quantity, 0),
+    0
+  );
+  const subtotal = grouped.reduce((sum, g) => sum + g.subtotal, 0);
+  const selectedHub = hubs.data?.find((h) => h._id === hubId);
+  // Online payment is single-restaurant only (one Checkout Session per order).
+  const onlinePaymentEnabled = Boolean(pricing.data?.onlinePaymentEnabled) && single;
+  const fees = grouped.map((g) => ({
+    restaurantId: g.restaurantId,
+    name: g.restaurant?.name || g.restaurantName || 'Restaurant',
+    fee: selectedHub ? priceDeliveryFee(pricing.data, routeKm(g.restaurant?.location, selectedHub.location)) : null,
+  }));
+  const deliveryTotal = selectedHub ? fees.reduce((sum, f) => sum + (f.fee || 0), 0) : null;
+  const discount = coupon?.discount || 0;
+  const grandTotal = subtotal - discount + (deliveryTotal ?? 0);
   const wrongRole = user && user.role !== 'customer';
-  const blocked = live.loading || Boolean(live.error) || gone || closed || unavailableCount > 0 || wrongRole || !hubs.data?.length;
+  const blocked =
+    live.loading ||
+    Boolean(live.error) ||
+    wrongRole ||
+    !hubs.data?.length ||
+    grouped.some((g) => g.gone || g.closed || g.unavailableCount > 0);
 
   const note = cart.customerNote || '';
+
+  const applyCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) return setCouponError('Enter a coupon code.');
+    if (!single) return setCouponError('Coupons work on single-restaurant orders only.');
+    setCouponBusy(true);
+    setCouponError('');
+    try {
+      const quote = await couponApi.validate({ code, restaurantId, subtotal });
+      setCoupon(quote);
+      setCouponCode(quote.code);
+    } catch (err) {
+      setCoupon(null);
+      setCouponError(errorMessage(err));
+    }
+    setCouponBusy(false);
+  };
+
+  const removeCoupon = () => {
+    setCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+  };
 
   const submit = async (e) => {
     e.preventDefault();
     if (!user) return navigate('/login', { state: { from: '/checkout' } });
     if (blocked || busy) return;
     if (!hubId) {
-      setHubError('Choose the hub where you’ll collect your order.');
+      setHubError('Choose the hub where you’ll collect your orders.');
       firstHubRef.current?.focus();
       return;
     }
+    const scheduledDate = scheduledFor ? new Date(scheduledFor) : null;
+    if (scheduledDate && (Number.isNaN(scheduledDate.getTime()) || scheduledDate.getTime() - Date.now() < MIN_SCHEDULE_LEAD_MS)) {
+      setScheduleError('Choose a time at least 15 minutes from now, or leave it empty to order now.');
+      return;
+    }
+    setScheduleError('');
     setBusy(true);
     setSubmitError('');
+    const payloadItems = (items) => items.map(({ menuItemId, quantity, note: n }) => ({ menuItemId, quantity, note: n }));
     try {
+      if (!single) {
+        const result = await orderApi.createGroup({
+          hubId,
+          customerNote: note,
+          scheduledFor: scheduledDate ? scheduledDate.toISOString() : undefined,
+          groups: grouped.map((g) => ({ restaurantId: g.restaurantId, items: payloadItems(g.items) })),
+        });
+        clear();
+        toast.success(
+          `${result.orders.length} orders placed — one per restaurant. Each arrives at the hub separately with its own pickup code.`,
+          { title: scheduledDate ? 'Orders scheduled' : 'Orders placed' }
+        );
+        navigate(`/orders/${result.orders[0]._id}`);
+        return;
+      }
+
       const order = await orderApi.create({
         restaurantId,
         hubId,
         customerNote: note,
-        paymentMethod: 'CASH_ON_COLLECTION',
-        items: cart.items.map(({ menuItemId, quantity, note: n }) => ({ menuItemId, quantity, note: n })),
+        paymentMethod,
+        ...(coupon?.code && { couponCode: coupon.code }),
+        ...(useCredit && creditBalance > 0 && { useCredit: true }),
+        scheduledFor: scheduledDate ? scheduledDate.toISOString() : undefined,
+        items: payloadItems(grouped[0].items),
       });
       clear();
-      toast.success('Your order is with the restaurant. We’ll let you know when it’s accepted.', { title: 'Order placed' });
+      // Online payment leaves the app for Stripe Checkout; the webhook is what marks it paid.
+      if (order.paymentUrl) {
+        window.location.assign(order.paymentUrl);
+        return;
+      }
+      toast.success(
+        scheduledDate
+          ? `Your order is scheduled for ${scheduledDate.toLocaleString()}. We’ll send it to the restaurant then.`
+          : 'Your order is with the restaurant. We’ll let you know when it’s accepted.',
+        { title: scheduledDate ? 'Order scheduled' : 'Order placed' }
+      );
       navigate(`/orders/${order._id}`);
     } catch (err) {
       const message = errorMessage(err);
@@ -230,7 +383,7 @@ export default function Checkout() {
     }
   };
 
-  const restaurantLink = restaurantId ? `/restaurants/${restaurantId}` : '/';
+  const restaurantLink = single && restaurantId ? `/restaurants/${restaurantId}` : '/';
 
   return (
     <form className={styles.page} onSubmit={submit} noValidate>
@@ -241,32 +394,62 @@ export default function Checkout() {
           <Card padding="none" className={styles.card} aria-busy={live.loading || undefined}>
             <div className={styles.cardHead}>
               <h2 className={styles.cardTitle}>
-                Your order from <Link to={restaurantLink}>{cart.restaurant.name}</Link>
+                {single ? (
+                  <>
+                    Your order from <Link to={restaurantLink}>{grouped[0].restaurant?.name || grouped[0].restaurantName}</Link>
+                  </>
+                ) : (
+                  <>Your orders · {grouped.length} restaurants</>
+                )}
               </h2>
-              {live.loading && <Spinner size={16} label="Checking the latest menu" />}
+              {live.loading && <Spinner size={16} label="Checking the latest menus" />}
               <InfoTooltip
                 label="About item notes"
                 content="Use “Add note” under a dish for requests about that dish only, like “no onions”. The restaurant sees it with the item."
               />
             </div>
-            <ul className={styles.lines}>
-              {lines.map((l) => (
-                <CartLine key={l.menuItemId} item={l} unavailable={l.unavailable} onQuantity={(q) => setQuantity(l.menuItemId, q)}>
-                  {!l.unavailable && <ItemNote item={l} onChange={(v) => setItemNote(l.menuItemId, v)} />}
-                </CartLine>
-              ))}
-            </ul>
+            {!single && (
+              <p className={styles.groupIntro}>
+                Each restaurant gets its own order and drone, so items arrive at the hub separately with separate pickup
+                codes.
+              </p>
+            )}
+            {grouped.map((group) => (
+              <section key={group.restaurantId} className={styles.orderGroup} aria-label={group.restaurant?.name || group.restaurantName}>
+                {!single && (
+                  <div className={styles.groupHead}>
+                    <h3 className={styles.groupName}>
+                      {group.restaurant ? (
+                        <Link to={`/restaurants/${group.restaurantId}`}>{group.restaurant.name}</Link>
+                      ) : (
+                        group.restaurantName || 'Restaurant'
+                      )}
+                    </h3>
+                    {group.closed && <Badge tone="warning">Closed</Badge>}
+                    {group.gone && <Badge tone="danger">Unavailable</Badge>}
+                    {group.unavailableCount > 0 && <Badge tone="warning">{group.unavailableCount} unavailable</Badge>}
+                  </div>
+                )}
+                <ul className={styles.lines}>
+                  {group.lines.map((l) => (
+                    <CartLine key={l.menuItemId} item={l} unavailable={l.unavailable} onQuantity={(q) => setQuantity(l.menuItemId, q)}>
+                      {!l.unavailable && <ItemNote item={l} onChange={(v) => setItemNote(l.menuItemId, v)} />}
+                    </CartLine>
+                  ))}
+                </ul>
+              </section>
+            ))}
           </Card>
 
           <Card className={styles.card}>
             <div className={styles.labelRow}>
               <label htmlFor="order-note" className={styles.sectionLabel}>
-                Note for the restaurant
+                {single ? 'Note for the restaurant' : 'Note for the restaurants'}
               </label>
               <span className={styles.optional}>(optional)</span>
               <InfoTooltip
                 label="About the order note"
-                content="This note covers the whole order. Tap a suggestion to add or remove it, or type your own."
+                content="This note covers every restaurant in this checkout. Tap a suggestion to add or remove it, or type your own."
               />
             </div>
             <div className={styles.chips} role="group" aria-label="Quick notes">
@@ -315,6 +498,36 @@ export default function Checkout() {
               />
             </fieldset>
           </Card>
+
+          <Card className={styles.card}>
+            <div className={styles.labelRow}>
+              <label htmlFor="schedule" className={styles.sectionLabel}>
+                Schedule for later
+              </label>
+              <span className={styles.optional}>(optional)</span>
+              <InfoTooltip
+                label="About scheduled orders"
+                content="Leave this empty to send the order now. A scheduled order is held back and only reaches the restaurant at the time you choose, so it is fresh when you collect it."
+              />
+            </div>
+            <Input
+              id="schedule"
+              type="datetime-local"
+              value={scheduledFor}
+              min={toLocalInputValue(new Date(Date.now() + MIN_SCHEDULE_LEAD_MS))}
+              aria-describedby="schedule-hint"
+              onChange={(e) => {
+                setScheduledFor(e.target.value);
+                setScheduleError('');
+              }}
+            />
+            <p id="schedule-hint" className={styles.optional}>
+              {single
+                ? 'The restaurant receives the order at this time. Leave empty to order now.'
+                : 'Each restaurant receives its order at this time. Leave empty to order now.'}
+            </p>
+            <FormError error={scheduleError} />
+          </Card>
         </div>
 
         <aside className={styles.aside} aria-label="Order summary">
@@ -329,24 +542,129 @@ export default function Checkout() {
               </div>
               <div className={styles.row}>
                 <dt className={styles.withTip}>
-                  Delivery fee
+                  Delivery fee{!single && ' (per restaurant)'}
                   <InfoTooltip
                     label="About the delivery fee"
-                    content="A flat drone delivery fee is added when the order is placed. You’ll see it on your order before you pay."
+                    content="Set when you place the order. Distance-based pricing adds a per-kilometre amount from the restaurant to your hub, capped at a maximum. Each restaurant in a split order has its own delivery."
                     size={15}
                   />
                 </dt>
-                <dd className={styles.muted}>Added at order</dd>
+                <dd className={styles.muted}>
+                  {deliveryTotal != null ? (
+                    <>
+                      {single ? (
+                        money(deliveryTotal)
+                      ) : (
+                        <span className={styles.feeLines}>
+                          {fees.map((f) => (
+                            <span key={f.restaurantId}>
+                              {f.name}: {money(f.fee || 0)}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    'Added at order'
+                  )}
+                </dd>
               </div>
+              {coupon && (
+                <div className={styles.row}>
+                  <dt>
+                    Coupon <strong>{coupon.code}</strong>
+                    <button type="button" className={styles.couponRemove} onClick={removeCoupon}>
+                      Remove
+                    </button>
+                  </dt>
+                  <dd className={styles.discount}>−{money(coupon.discount)}</dd>
+                </div>
+              )}
+              {creditBalance > 0 && single && (
+                <div className={styles.row}>
+                  <dt>
+                    Use store credit
+                    <InfoTooltip label="Store credit" content="Your referral and loyalty credit is applied before paying cash at the hub." size={14} />
+                  </dt>
+                  <dd className={styles.discount}>
+                    <label className={styles.useCreditLabel}>
+                      <input
+                        type="checkbox"
+                        checked={useCredit}
+                        onChange={(e) => setUseCredit(e.target.checked)}
+                        onMouseDown={(e) => e.preventDefault()}
+                      />
+                      Apply up to {money(Math.min(creditBalance, grandTotal - discount))}
+                    </label>
+                  </dd>
+                </div>
+              )}
               <div className={`${styles.row} ${styles.total}`}>
                 <dt>Total</dt>
-                <dd>{money(subtotal)} + fee</dd>
+                <dd>
+                  {deliveryTotal != null ? money(grandTotal) : `${money(subtotal - discount)} + fee`}
+                </dd>
               </div>
             </dl>
 
+            {single && !coupon && creditBalance === 0 && (
+              <div className={styles.couponBox}>
+                <Field label="Coupon code" optional>
+                  <div className={styles.couponRow}>
+                    <Input
+                      value={couponCode}
+                      maxLength={24}
+                      placeholder="e.g. SAVE20"
+                      onChange={(e) => {
+                        setCouponCode(e.target.value.toUpperCase());
+                        setCouponError('');
+                      }}
+                    />
+                    <Button type="button" variant="secondary" loading={couponBusy} onClick={applyCoupon}>
+                      Apply
+                    </Button>
+                  </div>
+                </Field>
+                <FormError error={couponError} />
+              </div>
+            )}
+            {!single && (
+              <p className={styles.optional}>
+                Coupons work on single-restaurant orders. Place these separately to use one.
+              </p>
+            )}
+
             <div className={styles.payment}>
-              <Icon name="cash" size={20} />
-              <span>Cash on collection</span>
+              <div className={styles.paymentOptions}>
+                <label className={styles.paymentOption}>
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="CASH_ON_COLLECTION"
+                    checked={paymentMethod === 'CASH_ON_COLLECTION'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                  />
+                  <Icon name="cash" size={20} />
+                  <span>Cash on collection</span>
+                </label>
+                {pricing.data && (
+                  <label className={styles.paymentOption}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="ONLINE_PAYMENT"
+                      checked={paymentMethod === 'ONLINE_PAYMENT'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      disabled={!onlinePaymentEnabled}
+                    />
+                    <Icon name="creditCard" size={20} />
+                    <span>Pay online</span>
+                    {!onlinePaymentEnabled && (
+                      <span className={styles.paymentDisabled}>{single ? 'Not configured' : 'Single-restaurant orders only'}</span>
+                    )}
+                  </label>
+                )}
+              </div>
               <InfoTooltip
                 label="About payment"
                 content="Pay in cash at the hub when you collect your order with your pickup code. Nothing is charged now."

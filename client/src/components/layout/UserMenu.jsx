@@ -4,19 +4,21 @@ import { assetUrl } from '../../api/http.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useDismiss } from '../../hooks/useDismiss.js';
 import { Avatar, Icon } from '../ui/index.js';
+import { useI18n } from '../../i18n/useI18n.jsx';
 import styles from './Popover.module.css';
 
 const LINKS = {
   customer: [
-    ['/orders', 'My orders', 'receipt'],
-    ['/?saved=1', 'Saved restaurants', 'heart'],
+    ['/orders', 'orders', 'receipt'],
+    ['/?saved=1', 'savedRestaurants', 'heart'],
   ],
-  owner: [['/owner', 'My restaurant', 'store']],
-  admin: [['/admin', 'Dashboard', 'grid']],
+  owner: [['/owner', 'myRestaurant', 'store']],
+  admin: [['/admin', 'dashboard', 'grid']],
 };
 
 export default function UserMenu() {
   const { user, logout } = useAuth();
+  const { t, lang, setLang } = useI18n();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
@@ -46,14 +48,29 @@ export default function UserMenu() {
           </div>
           <nav className={styles.menu} aria-label="Account">
             <Link to="/profile" className={styles.item} onClick={close}>
-              <Icon name="user" size={18} /> Profile
+              <Icon name="user" size={18} /> {t('profile')}
             </Link>
             {(LINKS[user.role] || []).map(([to, label, icon]) => (
               <Link key={to} to={to} className={styles.item} onClick={close}>
-                <Icon name={icon} size={18} /> {label}
+                <Icon name={icon} size={18} /> {t(label)}
               </Link>
             ))}
+            {user.role === 'customer' && (
+              <Link to="/profile" className={styles.item} onClick={close}>
+                <Icon name="star" size={18} /> {t('referAndEarn')}
+              </Link>
+            )}
             <div className={styles.sep} />
+            <div className={styles.langRow}>
+              <span>{t('language')}</span>
+              <button
+                type="button"
+                className={styles.langBtn}
+                onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
+              >
+                {lang === 'en' ? t('bangla') : t('english')}
+              </button>
+            </div>
             <button
               type="button"
               className={`${styles.item} ${styles.danger}`}
@@ -63,7 +80,7 @@ export default function UserMenu() {
                 navigate('/login');
               }}
             >
-              <Icon name="logOut" size={18} /> Log out
+              <Icon name="logOut" size={18} /> {t('logout')}
             </button>
           </nav>
         </div>

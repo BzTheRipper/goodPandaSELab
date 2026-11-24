@@ -68,6 +68,12 @@ export default function OrderSummaryCard({ order }) {
             <dt>Subtotal</dt>
             <dd>{money(order.subtotal)}</dd>
           </div>
+          {order.discount > 0 && (
+            <div className={styles.totalRow}>
+              <dt>Coupon {order.couponCode && <strong>{order.couponCode}</strong>}</dt>
+              <dd>−{money(order.discount)}</dd>
+            </div>
+          )}
           <div className={styles.totalRow}>
             <dt className={styles.withTip}>
               Drone delivery fee

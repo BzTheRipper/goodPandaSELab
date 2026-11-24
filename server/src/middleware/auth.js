@@ -40,3 +40,23 @@ export const authorize =
     if (!roles.includes(req.user.role)) return next(forbidden());
     next();
   };
+
+/** Attaches req.user when a valid token is present, but lets anonymous callers through. */
+export async function optionalAuth(req, _res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return next();
+  try {
+    req.user = await userFromToken(token);
+  } catch {
+    // A bad token is treated as "guest" for public endpoints, never as an error.
+  }
+  next();
+}
+
+/** Hardware drones authenticate with a shared key, not a user JWT. */
+export function droneKeyAuth(req, _res, next) {
+  if (!env.drone.ingestKey) return next(forbidden('Drone telemetry is not configured'));
+  if (req.headers['x-drone-key'] !== env.drone.ingestKey) return next(unauthorized('Invalid drone key'));
+  next();
+}

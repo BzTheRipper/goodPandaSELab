@@ -16,14 +16,16 @@ import {
   useConfirm,
   useToast,
 } from '../../components/ui/index.js';
+import QrScanner from '../../components/order/QrScanner.jsx';
 import { useSocketEvent } from '../../context/SocketContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { useAction, useAsync } from '../../hooks/useAsync.js';
 import { useOrderList } from '../../hooks/useOrder.js';
 import { money, shortId } from '../../utils/format.js';
 import { AdminEmpty, AdminListSkeleton } from './AdminShared.jsx';
 import styles from './Admin.module.css';
 
-const VALID_CODE = /^\d{4,6}$/;
+const VALID_CODE = /^\d{6}$/;
 
 export default function AdminPickup() {
   const [params, setParams] = useSearchParams();
@@ -33,8 +35,9 @@ export default function AdminPickup() {
   const [result, setResult] = useState(null);
   const confirm = useConfirm();
   const toast = useToast();
+  const { user } = useAuth();
 
-  const ready = useOrderList({ status: 'ARRIVED_AT_HUB' });
+  const ready = useOrderList({ status: 'ARRIVED_AT_HUB' }, { pageSize: 100 });
   const detail = useAsync(() => (orderId ? orderApi.detail(orderId) : Promise.resolve(null)), [orderId]);
   const { busy, run } = useAction();
 
@@ -72,20 +75,11 @@ export default function AdminPickup() {
     setParams(next, { replace: true });
   };
 
-  const submit = async (e) => {
-    e.preventDefault();
-    const trimmed = code.replace(/\D/g, '').slice(0, 6);
-    setFeedbackError('');
-    setResult(null);
-    if (!VALID_CODE.test(trimmed)) {
-      setFeedbackError('Enter the 4–6 digit pickup code from the customer’s order page.');
-      return;
-    }
+  const verify = async (payload, label) => {
     if (!canSubmit) return;
-
     const ok = await confirm({
       title: 'Hand over this order?',
-      message: `Only continue after checking the customer’s code and collecting ${money(order.total)} in cash. The order will close and be marked paid.`,
+      message: `Only continue after ${label} and collecting ${money(order.total)} in cash. The order will close and be marked paid.`,
       confirmLabel: 'Verify & collect',
       cancelLabel: 'Not yet',
       tone: 'primary',
@@ -94,7 +88,7 @@ export default function AdminPickup() {
 
     await run(async () => {
       try {
-        const updated = await orderApi.collect(orderId, trimmed);
+        const updated = await orderApi.collect(orderId, payload);
         setResult({ order: updated });
         setCode('');
         toast.success('Order collected and paid.', { title: 'Pickup verified' });
@@ -102,9 +96,21 @@ export default function AdminPickup() {
       } catch (err) {
         const message = errorMessage(err);
         setFeedbackError(message);
-        toast.error(message, { title: 'Couldn’t verify code' });
+        toast.error(message, { title: 'Couldn’t verify pickup' });
       }
     });
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const trimmed = code.replace(/\D/g, '').slice(0, 6);
+    setFeedbackError('');
+    setResult(null);
+    if (!VALID_CODE.test(trimmed)) {
+      setFeedbackError('Enter the 6-digit pickup code from the customer’s order page.');
+      return;
+    }
+    await verify({ pickupCode: trimmed }, 'checking the customer’s code');
   };
 
   return (
@@ -113,12 +119,12 @@ export default function AdminPickup() {
         title="Verify pickup code"
         subtitle="Hand orders over at the hub and record cash payment."
         hint="Ask the customer for the code on their order page. A correct code marks the order collected and paid; codes are never shown to admins."
-        back={{ to: '/admin/orders', label: 'All orders' }}
+        back={user?.role === 'hub_operator' ? { to: '/hub', label: 'Hub queue' } : { to: '/admin/orders', label: 'All orders' }}
       />
 
       <div className={styles.pickupPage}>
         <Card className={styles.pickupCard}>
-          <CardHeader title="Pickup verification" hint="Codes are 4–6 digits and can only be used while the order is at the hub." />
+          <CardHeader title="Pickup verification" hint="Codes are 6 digits and can only be used while the order is at the hub." />
 
           {ready.loading && options.length === 0 ? (
             <AdminListSkeleton rows={3} />
@@ -176,11 +182,23 @@ export default function AdminPickup() {
 
                   <form onSubmit={submit}>
                     <div className={styles.pickupIntro}>
-                      <h2>Enter the customer’s code</h2>
+                      <h2>Scan QR or enter the code</h2>
                     </div>
+                    {canSubmit && (
+                      <div className={styles.scannerBlock}>
+                        <QrScanner
+                          busy={busy}
+                          onScan={(token) => {
+                            setFeedbackError('');
+                            setResult(null);
+                            verify({ pickupToken: token }, 'scanning the customer’s QR code');
+                          }}
+                        />
+                      </div>
+                    )}
                     <Field
                       label="Pickup code"
-                      hint="Ask to see the 4–6 digit code on the customer’s order page. It changes for each order."
+                      hint="Ask to see the 6-digit code on the customer’s order page. It changes for each order."
                     >
                       <Input
                         className={styles.pickupCodeField}

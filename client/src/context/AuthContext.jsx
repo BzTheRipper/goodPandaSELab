@@ -4,13 +4,27 @@ import { tokenStore } from '../api/http.js';
 
 const AuthContext = createContext(null);
 
+/** Avoids a guaranteed 401 on load when the saved JWT is already expired. */
+function tokenExpired(token) {
+  try {
+    const segment = token.split('.')[1];
+    if (!segment) return true;
+    const payload = JSON.parse(atob(segment.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(tokenStore.get());
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!token) {
+    if (!token || tokenExpired(token)) {
+      if (token) tokenStore.clear();
+      setToken(null);
       setReady(true);
       return;
     }
@@ -51,6 +65,11 @@ export function AuthProvider({ children }) {
         setUser(r.user);
         return r.user;
       },
+      updateNotifications: async (prefs) => {
+        const r = await authApi.updateNotifications(prefs);
+        setUser(r.user);
+        return r.user;
+      },
       setAvatar: async (file) => {
         const r = await authApi.setAvatar(file);
         setUser(r.user);
@@ -75,4 +94,5 @@ export function AuthProvider({ children }) {
 
 export const useAuth = () => useContext(AuthContext);
 
-export const homeFor = (user) => ({ owner: '/owner/orders', admin: '/admin' })[user?.role] || '/';
+export const homeFor = (user) =>
+  ({ owner: '/owner/orders', admin: '/admin', hub_operator: '/hub' })[user?.role] || '/';

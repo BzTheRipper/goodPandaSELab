@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { errorMessage } from '../../api/http.js';
+import { assetUrl, errorMessage } from '../../api/http.js';
 import { adminApi } from '../../api/index.js';
 import PageHeader from '../../components/layout/PageHeader.jsx';
 import {
@@ -9,12 +9,16 @@ import {
   Button,
   Card,
   CardHeader,
+  EmptyState,
   Field,
   FormError,
   Input,
+  Modal,
   Select,
   StatusPill,
   Table,
+  Textarea,
+  Toggle,
   useConfirm,
   useToast,
 } from '../../components/ui/index.js';
@@ -36,6 +40,9 @@ export function AdminRestaurants() {
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState('');
   const [actionError, setActionError] = useState('');
+  const [docsFor, setDocsFor] = useState(null);
+  const [docBusy, setDocBusy] = useState('');
+  const [docError, setDocError] = useState('');
   const { data, setData, loading, error, reload } = useAsync(() => adminApi.restaurants(status), [status]);
   const confirm = useConfirm();
   const toast = useToast();
@@ -68,6 +75,21 @@ export function AdminRestaurants() {
       toast.error(message, { title: 'Couldn’t update restaurant' });
     } finally {
       setBusyId('');
+    }
+  };
+
+  const reviewDocument = async (restaurant, doc, verified) => {
+    setDocBusy(doc._id);
+    setDocError('');
+    try {
+      const updated = await adminApi.verifyDocument(restaurant._id, doc._id, { verified });
+      setDocsFor(updated);
+      setData((list) => list.map((r) => (r._id === updated._id ? { ...updated, owner: r.owner } : r)));
+      toast.success(verified ? 'Document verified.' : 'Document marked as needing attention.');
+    } catch (err) {
+      setDocError(errorMessage(err));
+    } finally {
+      setDocBusy('');
     }
   };
 
@@ -107,6 +129,19 @@ export function AdminRestaurants() {
           {r.isOpen ? 'Open' : 'Closed'}
         </Badge>
       ),
+    },
+    {
+      key: 'documents',
+      header: 'Documents',
+      render: (r) => {
+        const docs = r.documents || [];
+        const verified = docs.filter((d) => d.verifiedAt).length;
+        return (
+          <Button size="sm" variant="ghost" onClick={() => setDocsFor(r)}>
+            {docs.length ? `${verified}/${docs.length} verified` : 'None'}
+          </Button>
+        );
+      },
     },
     {
       key: 'actions',
@@ -172,6 +207,57 @@ export function AdminRestaurants() {
       >
         <Table columns={columns} rows={rows} rowKey={(r) => r._id} caption="Restaurants" />
       </AdminContent>
+
+      <Modal
+        open={Boolean(docsFor)}
+        onClose={() => setDocsFor(null)}
+        title={docsFor ? `Compliance — ${docsFor.name}` : 'Compliance'}
+        description="Verify the licence photos the owner uploaded. Notes are shown to the owner."
+      >
+        <FormError error={docError} />
+        {(docsFor?.documents || []).length === 0 ? (
+          <EmptyState icon="inbox" title="No documents uploaded">
+            Ask the owner to upload a food licence from their restaurant page.
+          </EmptyState>
+        ) : (
+          <ul className={styles.docsList}>
+            {(docsFor?.documents || []).map((doc) => {
+              const expired = doc.expiresAt && new Date(doc.expiresAt).getTime() < Date.now();
+              return (
+                <li key={doc._id} className={styles.docRow}>
+                  <div className={styles.docInfo}>
+                    <strong>
+                      {doc.type.replaceAll('_', ' ').toLowerCase()}
+                      {doc.label && <span className={styles.cellSub}> · {doc.label}</span>}
+                    </strong>
+                    <span className={styles.cellSub}>
+                      <a href={assetUrl(doc.fileUrl)} target="_blank" rel="noreferrer">
+                        View file
+                      </a>
+                      {' · '}
+                      {doc.expiresAt ? `Expires ${dateTime(doc.expiresAt)}` : 'No expiry'}
+                    </span>
+                    {doc.note && <span className={styles.docNote}>{doc.note}</span>}
+                  </div>
+                  <div className={styles.docActions}>
+                    {doc.verifiedAt ? <Badge tone="success" dot>Verified</Badge> : <Badge tone="warning">Unverified</Badge>}
+                    {expired && <Badge tone="danger">Expired</Badge>}
+                    {doc.verifiedAt ? (
+                      <Button size="sm" variant="dangerGhost" loading={docBusy === doc._id} onClick={() => reviewDocument(docsFor, doc, false)}>
+                        Revoke
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="primary" loading={docBusy === doc._id} onClick={() => reviewDocument(docsFor, doc, true)}>
+                        Verify
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -245,6 +331,17 @@ export function AdminUsers() {
       render: (u) => <Badge tone={ROLE_TONE[u.role] || 'neutral'}>{u.role}</Badge>,
     },
     { key: 'joined', header: 'Joined', render: (u) => <span className={styles.cellMuted}>{dateTime(u.createdAt)}</span> },
+    {
+      key: 'noShows',
+      header: 'No-shows',
+      align: 'right',
+      render: (u) =>
+        u.noShowCount > 0 ? (
+          <Badge tone={u.noShowCount >= 3 ? 'danger' : 'warning'}>{u.noShowCount}</Badge>
+        ) : (
+          <span className={styles.cellMuted}>—</span>
+        ),
+    },
     {
       key: 'status',
       header: 'Account',
@@ -329,11 +426,23 @@ export function AdminUsers() {
 export function AdminSettings() {
   const { data, loading, error, reload } = useAsync(() => adminApi.settings(), []);
   const [fee, setFee] = useState(null);
+  const [mode, setMode] = useState(null);
+  const [perKm, setPerKm] = useState(null);
+  const [max, setMax] = useState(null);
+  const [bannerMessage, setBannerMessage] = useState(null);
+  const [bannerTone, setBannerTone] = useState(null);
+  const [bannerActive, setBannerActive] = useState(null);
   const [fieldError, setFieldError] = useState('');
   const [saved, setSaved] = useState(false);
   const { busy, error: saveError, run } = useAction();
   const toast = useToast();
   const value = fee ?? data?.deliveryFee ?? 0;
+  const feeMode = mode ?? data?.mode ?? 'flat';
+  const perKmValue = perKm ?? data?.perKm ?? 0;
+  const maxValue = max ?? data?.max ?? 0;
+  const announcementMessage = bannerMessage ?? data?.announcement?.message ?? '';
+  const announcementTone = bannerTone ?? data?.announcement?.tone ?? 'info';
+  const announcementActive = bannerActive ?? data?.announcement?.active !== false;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -343,12 +452,41 @@ export function AdminSettings() {
       setFieldError('Enter an amount between 0 and 10,000 BDT.');
       return;
     }
+    if (feeMode === 'distance') {
+      const rate = Number(perKmValue);
+      const cap = Number(maxValue);
+      if (!Number.isFinite(rate) || rate < 0 || rate > 1000 || !Number.isFinite(cap) || cap < 0 || cap > 10000) {
+        setFieldError('Per-km rate and cap must be non-negative numbers.');
+        return;
+      }
+    }
     setFieldError('');
-    const updated = await run(() => adminApi.updateSettings({ deliveryFee: amount }));
+    const updated = await run(() =>
+      adminApi.updateSettings({
+        deliveryFee: amount,
+        mode: feeMode,
+        perKm: feeMode === 'distance' ? Number(perKmValue) : undefined,
+        max: feeMode === 'distance' ? Number(maxValue) : undefined,
+        announcement: announcementMessage.trim()
+          ? { message: announcementMessage.trim(), tone: announcementTone, active: announcementActive }
+          : null,
+      })
+    );
     if (updated) {
       setFee(String(updated.deliveryFee));
+      setMode(updated.mode);
+      setPerKm(String(updated.perKm));
+      setMax(String(updated.max));
+      setBannerMessage(updated.announcement?.message ?? '');
+      setBannerTone(updated.announcement?.tone ?? 'info');
+      setBannerActive(updated.announcement?.active !== false);
       setSaved(true);
-      toast.success(`Delivery fee is now ৳${updated.deliveryFee.toFixed(2)}.`, { title: 'Settings saved' });
+      toast.success(
+        feeMode === 'distance'
+          ? `Delivery: ৳${updated.deliveryFee} base + ৳${updated.perKm}/km, capped at ৳${updated.max}.`
+          : `Delivery fee is now ৳${updated.deliveryFee.toFixed(2)}.`,
+        { title: 'Settings saved' }
+      );
     }
   };
 
@@ -371,10 +509,23 @@ export function AdminSettings() {
         </Card>
       ) : (
         <Card as="form" className={styles.settingsCard} onSubmit={submit}>
-          <CardHeader title="Delivery fee" hint="Stored in BDT and applied to every new order." />
+          <CardHeader title="Delivery pricing" hint="Applied when a new order is placed. Existing orders keep their original fee." />
+          <Field label="Pricing mode" hint="Flat charges one fee; distance adds a per-km amount from restaurant to hub, capped below.">
+            <Select
+              value={feeMode}
+              onChange={(e) => {
+                setMode(e.target.value);
+                setSaved(false);
+              }}
+              aria-label="Delivery pricing mode"
+            >
+              <option value="flat">Flat fee</option>
+              <option value="distance">Distance-based</option>
+            </Select>
+          </Field>
           <Field
-            label="Drone delivery fee (BDT)"
-            hint="Must be between 0 and 10,000. Existing orders keep the fee they were placed with."
+            label={feeMode === 'distance' ? 'Base fee (BDT)' : 'Drone delivery fee (BDT)'}
+            hint="Must be between 0 and 10,000."
             error={fieldError}
           >
             <Input
@@ -388,6 +539,61 @@ export function AdminSettings() {
               }}
             />
           </Field>
+          {feeMode === 'distance' && (
+            <div className={styles.formGrid}>
+              <Field label="Per kilometre (BDT)" hint="Added for each km between restaurant and hub.">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={perKmValue}
+                  onChange={(e) => {
+                    setPerKm(e.target.value);
+                    setSaved(false);
+                  }}
+                />
+              </Field>
+              <Field label="Maximum fee (BDT)" hint="The total delivery fee never exceeds this.">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={maxValue}
+                  onChange={(e) => {
+                    setMax(e.target.value);
+                    setSaved(false);
+                  }}
+                />
+              </Field>
+            </div>
+          )}
+          <CardHeader title="Platform banner" hint="Shown at the top of every screen. Leave the message empty to hide it." />
+          <Field label="Banner message" optional hint="Up to 200 characters. Keep it short and actionable.">
+            <Textarea
+              rows={2}
+              maxLength={200}
+              value={announcementMessage}
+              placeholder="e.g. Drone deliveries are paused in Mirpur until 6pm today."
+              onChange={(e) => {
+                setBannerMessage(e.target.value);
+                setSaved(false);
+              }}
+            />
+          </Field>
+          <div className={styles.formGrid}>
+            <Field label="Banner tone">
+              <Select value={announcementTone} onChange={(e) => setBannerTone(e.target.value)}>
+                <option value="info">Information</option>
+                <option value="warning">Warning</option>
+                <option value="danger">Important</option>
+              </Select>
+            </Field>
+            <Field label="Visibility" hint="Hide the banner without deleting the message.">
+              <Toggle
+                label="Show this banner to everyone"
+                checked={announcementActive}
+                onChange={(e) => setBannerActive(e.target.checked)}
+              />
+            </Field>
+          </div>
           <FormError error={saveError} />
           {saved && (
             <Alert tone="success" title="Saved">
