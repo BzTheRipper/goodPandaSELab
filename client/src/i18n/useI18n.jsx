@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { translations } from './index.js';
 
 const defaultLocale = 'en';
 
