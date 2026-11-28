@@ -1,6 +1,16 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { env } from '../config/env.js';
 import { AuditLog, Campaign, Coupon, Dispute, Drone, Hub, MenuItem, Message, Notification, Order, PushSubscription, Restaurant, Review, Setting, User } from '../models/index.js';
 import { hashPassword } from '../services/auth.service.js';
+
+// Dummy images hosted on ImgBB (i.ibb.co). Run src/scripts/upload-dummy-images.js
+// to regenerate image-urls.json with fresh uploads.
+const IMAGE_URLS = JSON.parse(
+  await fs.readFile(path.resolve(process.cwd(), 'image-urls.json'), 'utf8'),
+);
+
+const img = (key) => IMAGE_URLS[key] || '';
 
 export const SEED_CREDENTIALS = {
   admin: { email: 'admin@goodpanda.test', password: 'admin123' },
@@ -41,6 +51,8 @@ export async function seedDatabase() {
       address: 'Road 27, Dhanmondi, Dhaka',
       location: { lat: 23.7461, lng: 90.3742 },
       categories: ['Biryani', 'Bangladeshi'],
+      logoUrl: img('biryani-logo'),
+      coverUrl: img('biryani-cover'),
       isOpen: true,
       status: 'APPROVED',
     },
@@ -52,22 +64,24 @@ export async function seedDatabase() {
       address: 'Gulshan Avenue, Gulshan 1, Dhaka',
       location: { lat: 23.7808, lng: 90.4167 },
       categories: ['Healthy', 'Cafe'],
+      logoUrl: img('greenleaf-logo'),
+      coverUrl: img('greenleaf-cover'),
       isOpen: true,
       status: 'APPROVED',
     },
   ]);
 
   await MenuItem.insertMany([
-    { restaurant: biryani._id, name: 'Kacchi Biryani', description: 'Mutton, aromatic rice, potato', price: 350, category: 'Biryani' },
-    { restaurant: biryani._id, name: 'Chicken Tehari', description: 'Spiced chicken and rice', price: 220, category: 'Biryani' },
-    { restaurant: biryani._id, name: 'Beef Bhuna', description: 'Slow-cooked beef curry', price: 280, category: 'Curry' },
-    { restaurant: biryani._id, name: 'Borhani', description: 'Spiced yogurt drink', price: 60, category: 'Drinks' },
-    { restaurant: biryani._id, name: 'Firni', description: 'Rice pudding', price: 80, category: 'Dessert', isAvailable: false },
-    { restaurant: greenLeaf._id, name: 'Caesar Salad', description: 'Romaine, parmesan, croutons', price: 320, category: 'Salads' },
-    { restaurant: greenLeaf._id, name: 'Chicken Wrap', description: 'Grilled chicken, veggies, garlic sauce', price: 260, category: 'Wraps' },
-    { restaurant: greenLeaf._id, name: 'Quinoa Bowl', description: 'Quinoa, avocado, chickpeas', price: 390, category: 'Bowls' },
-    { restaurant: greenLeaf._id, name: 'Iced Lemon Tea', description: 'Can be made with 0-calorie sugar', price: 120, category: 'Drinks' },
-    { restaurant: greenLeaf._id, name: 'Fresh Orange Juice', description: 'No added sugar', price: 150, category: 'Drinks' },
+    { restaurant: biryani._id, name: 'Kacchi Biryani', description: 'Mutton, aromatic rice, potato', price: 350, category: 'Biryani', imageUrl: img('kacchi-biryani') },
+    { restaurant: biryani._id, name: 'Chicken Tehari', description: 'Spiced chicken and rice', price: 220, category: 'Biryani', imageUrl: img('chicken-tehari') },
+    { restaurant: biryani._id, name: 'Beef Bhuna', description: 'Slow-cooked beef curry', price: 280, category: 'Curry', imageUrl: img('beef-bhuna') },
+    { restaurant: biryani._id, name: 'Borhani', description: 'Spiced yogurt drink', price: 60, category: 'Drinks', imageUrl: img('borhani') },
+    { restaurant: biryani._id, name: 'Firni', description: 'Rice pudding', price: 80, category: 'Dessert', isAvailable: false, imageUrl: img('firni') },
+    { restaurant: greenLeaf._id, name: 'Caesar Salad', description: 'Romaine, parmesan, croutons', price: 320, category: 'Salads', imageUrl: img('caesar-salad') },
+    { restaurant: greenLeaf._id, name: 'Chicken Wrap', description: 'Grilled chicken, veggies, garlic sauce', price: 260, category: 'Wraps', imageUrl: img('chicken-wrap') },
+    { restaurant: greenLeaf._id, name: 'Quinoa Bowl', description: 'Quinoa, avocado, chickpeas', price: 390, category: 'Bowls', imageUrl: img('quinoa-bowl') },
+    { restaurant: greenLeaf._id, name: 'Iced Lemon Tea', description: 'Can be made with 0-calorie sugar', price: 120, category: 'Drinks', imageUrl: img('iced-lemon-tea') },
+    { restaurant: greenLeaf._id, name: 'Fresh Orange Juice', description: 'No added sugar', price: 150, category: 'Drinks', imageUrl: img('orange-juice') },
   ]);
 
   const hubs = await Hub.insertMany([

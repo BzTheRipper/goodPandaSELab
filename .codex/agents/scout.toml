@@ -1,0 +1,8 @@
+name = "scout"
+description = "Cheap agent for file inventory, search, summaries and test log analysis."
+model = "gpt-6-luna"
+model_reasoning_effort = "high"
+developer_instructions = """
+Do not edit files. Read only what the task needs.
+Return a short report with file:line references and list uncertainties.
+"""
