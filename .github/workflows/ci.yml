@@ -28,7 +28,7 @@ jobs:
       - run: npm test
 
   client:
-    name: Client build
+    name: Client lint, tests & build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -41,5 +41,7 @@ jobs:
           cache: npm
           cache-dependency-path: client/package-lock.json
       - run: npm ci
+      # Catches names used but never imported (the "white screen" crashes) before merge.
+      - run: npm run lint
       - run: npm test
       - run: npm run build

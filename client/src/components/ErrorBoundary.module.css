@@ -1,0 +1,13 @@
+/* Page-level crash message: sits where the page content would be. */
+.page {
+  padding: var(--space-8) var(--space-4);
+}
+
+/* App-level crash message: the whole screen, centred. */
+.app {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: var(--space-4);
+  background: var(--color-bg, var(--color-surface));
+}
