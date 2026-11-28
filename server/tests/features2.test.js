@@ -170,6 +170,14 @@ describe('hub operators', () => {
 
 describe('fleet maintenance', () => {
   it('schedules service and records battery history', async () => {
+    // Earlier tests dispatch real simulated flights and then delete their orders in beforeEach,
+    // which can leave the drone stranded IN_FLIGHT. Stop leftover flights and start from IDLE.
+    const { flightController } = await import('../src/services/drone/index.js');
+    flightController.stopAll();
+    await Drone.updateOne(
+      { identifier: 'GP-DR-01' },
+      { status: 'IDLE', currentOrder: null, destination: null, battery: 100 }
+    );
     const drone = await Drone.findOne({ identifier: 'GP-DR-01' });
     const due = new Date(Date.now() + 86400000).toISOString();
     const scheduled = await api()
