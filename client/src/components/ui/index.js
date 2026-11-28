@@ -5,7 +5,7 @@ export { Card, CardHeader } from './Card.jsx';
 export { default as Chip } from './Chip.jsx';
 export { ConfirmDialog, ConfirmProvider, useConfirm } from './ConfirmDialog.jsx';
 export { Alert, EmptyState, ErrorState, FormError, Skeleton } from './Feedback.jsx';
-export { Checkbox, Field, Input, PasswordInput, Select, Textarea, Toggle } from './Form.jsx';
+export { BD_MOBILE_DIGITS, bdMobileDigits, Checkbox, Field, Input, PasswordInput, PhoneInput, Select, Textarea, Toggle } from './Form.jsx';
 export { default as Icon } from './Icon.jsx';
 export { default as InfoTooltip } from './InfoTooltip.jsx';
 export { default as Media } from './Media.jsx';

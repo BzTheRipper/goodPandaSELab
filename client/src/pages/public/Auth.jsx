@@ -14,6 +14,7 @@ import {
   InfoTooltip,
   Input,
   PasswordInput,
+  PhoneInput,
   useToast,
 } from '../../components/ui/index.js';
 import { homeFor, useAuth } from '../../context/AuthContext.jsx';
@@ -171,8 +172,8 @@ export function Register() {
           <PasswordInput icon="lock" autoComplete="new-password" required minLength={6} value={form.password} onChange={set('password')} />
         </Field>
         <div className={styles.row2}>
-          <Field label="Phone" hint="Restaurants and support call this number about your orders.">
-            <Input type="tel" icon="phone" autoComplete="tel" required value={form.phone} onChange={set('phone')} placeholder="+8801…" />
+          <Field label="Mobile number" hint="Bangladeshi mobile only. Type the 10 digits after +880, e.g. 1712345678. Restaurants and support call this number about your orders.">
+            <PhoneInput required value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
           </Field>
           <Field label="Address" optional>
             <Input icon="home" autoComplete="street-address" value={form.address} onChange={set('address')} />
@@ -333,8 +334,8 @@ export function Profile() {
             <Input icon="user" autoComplete="name" required value={form.name} onChange={set('name')} />
           </Field>
           <div className={styles.row2}>
-            <Field label="Phone" hint="Shown to restaurants and support so they can call you about an order.">
-              <Input type="tel" icon="phone" autoComplete="tel" required value={form.phone} onChange={set('phone')} />
+            <Field label="Mobile number" hint="Bangladeshi mobile only: the 10 digits after +880. Shown to restaurants and support so they can call you about an order.">
+              <PhoneInput required value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
             </Field>
             <Field label="Address" optional>
               <Input icon="home" autoComplete="street-address" value={form.address} onChange={set('address')} />

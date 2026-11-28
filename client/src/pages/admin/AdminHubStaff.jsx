@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { errorMessage } from '../../api/http.js';
 import { adminApi, hubApi } from '../../api/index.js';
 import PageHeader from '../../components/layout/PageHeader.jsx';
-import { Alert, Button, Card, CardHeader, Field, FormError, Input, Select, useToast } from '../../components/ui/index.js';
+import { Alert, BD_MOBILE_DIGITS, bdMobileDigits, Button, Card, CardHeader, Field, FormError, Input, PhoneInput, Select, useToast } from '../../components/ui/index.js';
 import { useAction, useAsync } from '../../hooks/useAsync.js';
 import { dateTime } from '../../utils/format.js';
 import { AdminContent } from './AdminShared.jsx';
@@ -26,8 +26,14 @@ export default function AdminHubStaff() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (form.name.trim().length < 2 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email) || form.password.length < 8 || !form.hubId) {
-      setFieldError('Provide a name, valid email, phone, a password of at least 8 characters and a hub.');
+    if (
+      form.name.trim().length < 2 ||
+      !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email) ||
+      !BD_MOBILE_DIGITS.test(bdMobileDigits(form.phone)) ||
+      form.password.length < 8 ||
+      !form.hubId
+    ) {
+      setFieldError('Provide a name, valid email, a Bangladeshi mobile number (10 digits after +880), a password of at least 8 characters and a hub.');
       return;
     }
     const created = await run(() => adminApi.createHubOperator(form));
@@ -55,8 +61,14 @@ export default function AdminHubStaff() {
           <Field label="Email">
             <Input type="email" value={form.email} onChange={set('email')} placeholder="karim@goodpanda.test" />
           </Field>
-          <Field label="Phone">
-            <Input value={form.phone} onChange={set('phone')} placeholder="+88017…" />
+          <Field label="Mobile number" hint="Bangladeshi mobile only: the 10 digits after +880.">
+            <PhoneInput
+              value={form.phone}
+              onChange={(phone) => {
+                setForm((f) => ({ ...f, phone }));
+                setFieldError('');
+              }}
+            />
           </Field>
           <Field label="Temporary password" hint="At least 8 characters; ask them to change it after signing in.">
             <Input type="password" value={form.password} onChange={set('password')} autoComplete="new-password" />

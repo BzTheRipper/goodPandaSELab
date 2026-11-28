@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { ConfirmProvider, ToastProvider } from './components/ui/index.js';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { CartProvider } from './context/CartContext.jsx';
@@ -21,6 +22,9 @@ if ('serviceWorker' in navigator) {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
+    {/* Last resort: if anything outside a single page crashes (header, menu, providers),
+        show a friendly message with a Reload button instead of a white screen. */}
+    <ErrorBoundary scope="app">
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ToastProvider>
         <ConfirmProvider>
@@ -36,5 +40,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </ConfirmProvider>
       </ToastProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 );

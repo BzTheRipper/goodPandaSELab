@@ -4,6 +4,7 @@ import heroUrl from '../../assets/auth-hero.webp';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
 import CartDrawer from '../cart/CartDrawer.jsx';
+import ErrorBoundary from '../ErrorBoundary.jsx';
 import { Button, CountBadge, Drawer, Icon, PageLoader } from '../ui/index.js';
 import AnnouncementBanner from './AnnouncementBanner.jsx';
 import Logo from './Logo.jsx';
@@ -24,10 +25,14 @@ function Content() {
   useEffect(() => {
     if (navType !== 'POP') window.scrollTo(0, 0);
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A crash inside one page shows a message there; the header stays usable, and the
+  // `key` clears the error as soon as the user moves to another page.
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Outlet />
-    </Suspense>
+    <ErrorBoundary scope="page" key={pathname}>
+      <Suspense fallback={<PageLoader />}>
+        <Outlet />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 

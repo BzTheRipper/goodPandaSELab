@@ -83,6 +83,32 @@ describe('auth & role-based authorization', () => {
     expect(admin.status).toBe(400);
   });
 
+  it('only accepts Bangladeshi mobile numbers and stores them as +8801XXXXXXXXX', async () => {
+    const register = (email, phone) => api().post('/api/auth/register').send({ name: 'Phone Test', email, password: 'secret1', phone });
+
+    // Local, international and bare 10-digit forms are all saved the same way.
+    for (const [i, phone] of ['01712345678', '+880 1712-345678', '1912345678'].entries()) {
+      const res = await register(`ok${i}@x.io`, phone);
+      expect(res.status).toBe(201);
+      expect(res.body.user.phone).toMatch(/^\+8801[3-9]\d{8}$/);
+    }
+    expect((await register('ok9@x.io', '01712345678')).body.user.phone).toBe('+8801712345678');
+
+    // Wrong length, wrong operator prefix, letters, or another country are refused.
+    for (const [i, phone] of ['171234567', '17123456789', '1212345678', '17123abc78', '+447912345678'].entries()) {
+      const res = await register(`bad${i}@x.io`, phone);
+      expect(res.status).toBe(400);
+    }
+
+    // The profile page uses the same rule.
+    const { body } = await register('edit@x.io', '01712345678');
+    const auth = { Authorization: `Bearer ${body.token}` };
+    expect((await api().patch('/api/auth/me').set(auth).send({ phone: '12345' })).status).toBe(400);
+    const updated = await api().patch('/api/auth/me').set(auth).send({ phone: '01812345678' });
+    expect(updated.status).toBe(200);
+    expect(updated.body.user.phone).toBe('+8801812345678');
+  });
+
   it('requires a token and enforces roles', async () => {
     expect((await api().get('/api/orders')).status).toBe(401);
     expect((await api().get('/api/admin/dashboard').set(as('customer'))).status).toBe(403);

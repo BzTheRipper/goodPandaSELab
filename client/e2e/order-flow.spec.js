@@ -61,7 +61,7 @@ test.describe('Critical order path', () => {
     await hubPage.click('a:has-text("Verify"), text="Verify pickup"');
     await page.goto(orderUrl);
     const codeText = await page.locator('text=/\\d{6}/').first().textContent();
-    await hubPage.fill('input[name="pickupCode"]', codeText!.replace(/\D/g, ''));
+    await hubPage.fill('input[name="pickupCode"]', codeText.replace(/\D/g, ''));
     await hubPage.click('button:has-text("Verify & collect")');
 
     await hubPage.waitForURL('**/hub**');

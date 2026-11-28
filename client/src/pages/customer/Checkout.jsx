@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { errorCode, errorMessage } from '../../api/http.js';
-import { couponApi, hubApi, orderApi, restaurantApi, settingsApi } from '../../api/index.js';
+import { authApi, couponApi, hubApi, orderApi, restaurantApi, settingsApi } from '../../api/index.js';
 import CartLine from '../../components/cart/CartLine.jsx';
 import PageHeader from '../../components/layout/PageHeader.jsx';
 import {
@@ -12,6 +12,7 @@ import {
   Chip,
   EmptyState,
   ErrorState,
+  Field,
   FormError,
   Icon,
   InfoTooltip,
@@ -288,6 +289,10 @@ export default function Checkout() {
     wrongRole ||
     !hubs.data?.length ||
     grouped.some((g) => g.gone || g.closed || g.unavailableCount > 0);
+  // Summaries across every restaurant in the cart, for the warnings above the Place order button.
+  const goneNames = grouped.filter((g) => g.gone).map((g) => g.restaurantName || 'A restaurant');
+  const closedNames = grouped.filter((g) => g.closed).map((g) => g.restaurant.name);
+  const unavailableCount = grouped.reduce((n, g) => n + g.unavailableCount, 0);
 
   const note = cart.customerNote || '';
 
@@ -685,7 +690,7 @@ export default function Checkout() {
                 {live.error}
               </Alert>
             )}
-            {gone && (
+            {goneNames.length > 0 && (
               <Alert
                 tone="danger"
                 title="Restaurant unavailable"
@@ -695,12 +700,13 @@ export default function Checkout() {
                   </Button>
                 }
               >
-                This restaurant is no longer on GoodPanda.
+                {goneNames.join(', ')} {goneNames.length === 1 ? 'is' : 'are'} no longer on GoodPanda.
               </Alert>
             )}
-            {closed && (
+            {closedNames.length > 0 && (
               <Alert tone="warning" icon="clock" title="Closed right now">
-                {liveRestaurant.name} isn’t taking orders. Try again when it opens.
+                {closedNames.join(', ')} {closedNames.length === 1 ? 'isn’t' : 'aren’t'} taking orders. Try again when{' '}
+                {closedNames.length === 1 ? 'it opens' : 'they open'}.
               </Alert>
             )}
             {unavailableCount > 0 && (

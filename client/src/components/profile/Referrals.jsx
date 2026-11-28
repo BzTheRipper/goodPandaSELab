@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { authApi } from '../../api/index.js';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { Card, EmptyState, Skeleton, useToast } from '../ui/index.js';
+import { Badge, Card, CardHeader, EmptyState, Skeleton, useToast } from '../ui/index.js';
 import styles from './Referrals.module.css';
 
 /** Referral code, signup credit, loyalty stamps and invite history. */
@@ -24,6 +24,11 @@ export default function Referrals() {
       setLoading(false);
     }
   };
+
+  // Fetch the referral data once when the profile page opens.
+  useEffect(() => {
+    load();
+  }, []);
 
   const copyCode = async (code) => {
     try {
