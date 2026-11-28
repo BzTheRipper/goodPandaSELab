@@ -5,13 +5,26 @@ import { authLimiter, uploadLimiter } from '../middleware/rateLimit.js';
 import { upload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
 import { asyncHandler as h } from '../utils/asyncHandler.js';
-import { loginSchema, notificationPrefsSchema, passwordChangeSchema, profileSchema, pushSubscriptionSchema, pushUnsubscribeSchema, registerSchema } from '../validators/schemas.js';
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  notificationPrefsSchema,
+  passwordChangeSchema,
+  profileSchema,
+  pushSubscriptionSchema,
+  pushUnsubscribeSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from '../validators/schemas.js';
 
 const router = Router();
 
 router.post('/register', authLimiter, validate(registerSchema), h(auth.register));
 router.post('/login', authLimiter, validate(loginSchema), h(auth.login));
 router.post('/logout', authenticate, auth.logout);
+// "Forgot password": request an emailed link, then set a new password with it.
+router.post('/password/forgot', authLimiter, validate(forgotPasswordSchema), h(auth.forgotPassword));
+router.post('/password/reset', authLimiter, validate(resetPasswordSchema), h(auth.resetPassword));
 router.get('/push/config', h(auth.pushConfig));
 router.post('/me/push', authenticate, validate(pushSubscriptionSchema), h(auth.pushSubscribe));
 router.delete('/me/push', authenticate, validate(pushUnsubscribeSchema), h(auth.pushUnsubscribe));

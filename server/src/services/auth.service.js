@@ -1,9 +1,12 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'node:crypto';
+import { env } from '../config/env.js';
 import { ORDER_STATUS, RESTAURANT_STATUS, ROLES } from '../constants.js';
 import { Notification, Order, PushSubscription, Restaurant, Review, User } from '../models/index.js';
 import { signToken } from '../middleware/auth.js';
 import { badRequest, conflict, forbidden, notFound, unauthorized } from '../utils/errors.js';
 import { audit } from './audit.service.js';
+import { buildPasswordResetEmail, sendEmail } from './email.service.js';
 import { applyInvite, ensureReferralCode } from './referral.service.js';
 import { storage } from './storage.service.js';
 
@@ -48,6 +51,66 @@ export async function changePassword(user, { currentPassword, newPassword }) {
   }
   withHash.passwordHash = await hashPassword(newPassword);
   await withHash.save();
+}
+
+// ---------- Forgot password ----------
+const RESET_TTL_MINUTES = 30;
+// One email per account per minute, so nobody can flood someone's inbox.
+const RESET_RESEND_MS = 60 * 1000;
+const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+/**
+ * Emails a one-time reset link. Always resolves the same way for unknown, inactive or
+ * throttled accounts, so the response never reveals whether an email is registered.
+ * Returns `{ link }` (null when nothing was sent) for tests; callers must not expose it.
+ */
+export async function requestPasswordReset(email) {
+  const user = await User.findOne({ email: email.toLowerCase(), isActive: true, deletedAt: null }).select('+resetRequestedAt');
+  if (!user) return { link: null };
+  if (user.resetRequestedAt && Date.now() - user.resetRequestedAt.getTime() < RESET_RESEND_MS) return { link: null };
+
+  const token = crypto.randomBytes(32).toString('hex');
+  await User.updateOne(
+    { _id: user._id },
+    {
+      resetTokenHash: hashResetToken(token),
+      resetTokenExpiresAt: new Date(Date.now() + RESET_TTL_MINUTES * 60 * 1000),
+      resetRequestedAt: new Date(),
+    }
+  );
+  const origin = String(env.clientOrigin).split(',')[0].trim();
+  const link = `${origin}/reset-password?token=${token}`;
+
+  // Sent in the background so the response time doesn't reveal whether the account exists.
+  sendEmail(buildPasswordResetEmail(user, link, RESET_TTL_MINUTES))
+    .catch((err) => {
+      console.error('[auth] password reset email failed:', err.message);
+      return false;
+    })
+    .then((sent) => {
+      // Development only: without working email (no key, or Resend's test sender refusing
+      // other recipients), show the link in the backend window so the flow can be tested.
+      if (!sent && env.nodeEnv === 'development') {
+        console.info(`[auth] Password reset link for ${user.email} (not emailed): ${link}`);
+      }
+    });
+  return { link };
+}
+
+/** Sets a new password from a valid, unexpired reset token, then signs out every device. */
+export async function resetPassword({ token, password }) {
+  const user = await User.findOne({
+    resetTokenHash: hashResetToken(token),
+    resetTokenExpiresAt: { $gt: new Date() },
+  }).select('+passwordHash +resetTokenHash +resetTokenExpiresAt');
+  if (!user || !user.isActive || user.deletedAt) {
+    throw badRequest('This reset link is invalid or has expired. Please request a new one.');
+  }
+  user.passwordHash = await hashPassword(password);
+  user.resetTokenHash = null;
+  user.resetTokenExpiresAt = null;
+  user.passwordChangedAt = new Date();
+  await user.save();
 }
 
 export async function setAvatar(user, file) {

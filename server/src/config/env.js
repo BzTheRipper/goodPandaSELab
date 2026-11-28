@@ -61,7 +61,8 @@ export const env = {
   },
   email: {
     // Resend-compatible HTTP API for transactional email (optional). No-op when not configured.
-    apiKey: process.env.EMAIL_API_KEY || '',
+    // Tests never send real email (they fake the provider when they need it).
+    apiKey: process.env.NODE_ENV === 'test' ? '' : process.env.EMAIL_API_KEY || '',
     from: process.env.EMAIL_FROM || 'GoodPanda <receipts@goodpanda.test>',
     apiUrl: process.env.EMAIL_API_URL || 'https://api.resend.com/emails',
   },

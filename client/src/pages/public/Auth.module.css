@@ -25,6 +25,30 @@
 }
 .switch a { font-weight: var(--weight-semibold); }
 
+/* "Forgot password?" under the password field, aligned right. */
+.forgot {
+  align-self: flex-end;
+  margin-top: calc(var(--space-2) * -1);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.note {
+  margin-top: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+/* A button that looks like a link (for "try again"). */
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+.linkButton:hover { text-decoration: underline; }
+
 /* ---------- Role picker ---------- */
 .roles { border: 0; margin: 0; padding: 0; min-width: 0; }
 .legend {

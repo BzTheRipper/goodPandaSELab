@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
 import { assetUrl } from '../../api/http.js';
 import { authApi } from '../../api/index.js';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import PageHeader from '../../components/layout/PageHeader.jsx';
 import {
+  Alert,
   Avatar,
   Badge,
   Button,
@@ -82,6 +83,9 @@ export function Login() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
         </Field>
+        <Link to="/forgot-password" state={{ email: form.email }} className={styles.forgot}>
+          Forgot password?
+        </Link>
         <FormError error={error} />
         <Button type="submit" variant="primary" size="lg" block loading={busy} className={styles.submit}>
           Log in
@@ -109,6 +113,140 @@ export function Login() {
             ))}
           </div>
         </div>
+      )}
+    </>
+  );
+}
+
+/** Step 1 of "forgot password": ask for the email and send a reset link. */
+export function ForgotPassword() {
+  const location = useLocation();
+  const [email, setEmail] = useState(location.state?.email || '');
+  const [sentTo, setSentTo] = useState('');
+  const { busy, error, run } = useAction();
+
+  const submit = (e) => {
+    e.preventDefault();
+    run(async () => {
+      await authApi.forgotPassword({ email });
+      setSentTo(email);
+    });
+  };
+
+  if (sentTo) {
+    return (
+      <>
+        <AuthHeading title="Check your email" />
+        <Alert tone="success" title="Reset link on its way">
+          If an account exists for <strong>{sentTo}</strong>, we’ve sent a link to choose a new password. It works once
+          and expires in 30 minutes.
+        </Alert>
+        <p className={styles.note}>
+          Didn’t get it? Check your spam folder, or{' '}
+          <button type="button" className={styles.linkButton} onClick={() => setSentTo('')}>
+            try again
+          </button>{' '}
+          in a minute.
+        </p>
+        <p className={styles.switch}>
+          Remembered it? <Link to="/login">Back to log in</Link>
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <AuthHeading title="Forgot your password?" subtitle="Enter your account’s email and we’ll send you a link to choose a new one." />
+      <form className={styles.form} onSubmit={submit}>
+        <Field label="Email">
+          <Input type="email" icon="mail" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
+        <FormError error={error} />
+        <Button type="submit" variant="primary" size="lg" block loading={busy} className={styles.submit}>
+          Send reset link
+        </Button>
+      </form>
+      <p className={styles.switch}>
+        Remembered it? <Link to="/login">Back to log in</Link>
+      </p>
+    </>
+  );
+}
+
+/** Step 2: the page the emailed link opens. Sets the new password with the link's token. */
+export function ResetPassword() {
+  const [params] = useSearchParams();
+  const token = params.get('token') || '';
+  const navigate = useNavigate();
+  const toast = useToast();
+  const { user, logout } = useAuth();
+  const [form, setForm] = useState({ password: '', confirm: '' });
+  const { busy, error, setError, run } = useAction();
+  const validLink = /^[a-f\d]{64}$/i.test(token);
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (form.password !== form.confirm) {
+      setError('The two passwords don’t match.');
+      return;
+    }
+    run(async () => {
+      await authApi.resetPassword({ token, password: form.password });
+      // The reset signs out every device, including this browser if it was logged in.
+      if (user) logout();
+      toast.success('Password changed. Log in with your new password.');
+      navigate('/login', { replace: true });
+    });
+  };
+
+  if (!validLink) {
+    return (
+      <>
+        <AuthHeading title="This link doesn’t work" />
+        <Alert tone="warning" title="Invalid reset link">
+          The link is incomplete or has been changed. Request a new one and use the link from the latest email.
+        </Alert>
+        <p className={styles.switch}>
+          <Link to="/forgot-password">Send a new reset link</Link>
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <AuthHeading title="Choose a new password" subtitle="After this, you’ll be logged out on every device and can log in with the new password." />
+      <form className={styles.form} onSubmit={submit}>
+        <Field label="New password" hint="At least 6 characters.">
+          <PasswordInput
+            icon="lock"
+            autoComplete="new-password"
+            required
+            minLength={6}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+          />
+        </Field>
+        <Field label="Confirm new password">
+          <PasswordInput
+            icon="lock"
+            autoComplete="new-password"
+            required
+            minLength={6}
+            value={form.confirm}
+            onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+          />
+        </Field>
+        <FormError error={error} />
+        <Button type="submit" variant="primary" size="lg" block loading={busy} className={styles.submit}>
+          Set new password
+        </Button>
+      </form>
+      {/invalid or has expired/i.test(error) && (
+        <p className={styles.switch}>
+          <Link to="/forgot-password">Send a new reset link</Link>
+        </p>
       )}
     </>
   );

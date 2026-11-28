@@ -12,6 +12,8 @@ const NotFound = lazy(() => import('./pages/public/NotFound.jsx'));
 const loadAuth = () => import('./pages/public/Auth.jsx');
 const Login = named(loadAuth, 'Login');
 const Register = named(loadAuth, 'Register');
+const ForgotPassword = named(loadAuth, 'ForgotPassword');
+const ResetPassword = named(loadAuth, 'ResetPassword');
 const Profile = named(loadAuth, 'Profile');
 const Checkout = lazy(() => import('./pages/customer/Checkout.jsx'));
 const MyOrders = lazy(() => import('./pages/customer/MyOrders.jsx'));
@@ -94,6 +96,8 @@ export default function App() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Page title="Log in" el={Login} />} />
         <Route path="/register" element={<Page title="Create account" el={Register} />} />
+        <Route path="/forgot-password" element={<Page title="Forgot password" el={ForgotPassword} />} />
+        <Route path="/reset-password" element={<Page title="Reset password" el={ResetPassword} />} />
       </Route>
       <Route element={<RoleLayout />}>
         {ROUTES.map(([path, props]) => (
