@@ -2,7 +2,18 @@ import { z } from 'zod';
 import { CONFIRMATION_TYPES, ORDER_STATUS } from '../constants.js';
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');
+// Restaurant numbers may be landlines, so they keep the loose format.
 const phone = z.string().trim().regex(/^\+?[\d\s-]{6,20}$/, 'Invalid phone number');
+// A person's phone must be a Bangladeshi mobile: +880 followed by 10 digits starting 13–19
+// (operator prefixes 013–019). Accepts "+8801712345678", "8801712345678", "01712345678" or
+// "1712345678" (spaces/dashes ignored) and always stores "+8801712345678".
+const bdMobile = z.preprocess(
+  (v) => (typeof v === 'string' ? v.trim().replace(/[\s-]/g, '').replace(/^(\+?880|0)/, '') : v),
+  z
+    .string()
+    .regex(/^1[3-9]\d{8}$/, 'Enter a valid Bangladeshi mobile number: 10 digits after +880, starting with 13–19')
+    .transform((digits) => `+880${digits}`)
+);
 // Multipart forms send everything as strings; accept "true"/"false".
 const boolish = z.preprocess((v) => (v === 'true' ? true : v === 'false' ? false : v), z.boolean());
 const csvList = z.preprocess(
@@ -18,7 +29,7 @@ export const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().email(),
   password: z.string().min(6).max(100),
-  phone,
+  phone: bdMobile,
   address: z.string().trim().max(200).optional().default(''),
   role: z.enum(['customer', 'owner']).default('customer'),
   referralCode: z.string().trim().max(16).optional(),
@@ -32,7 +43,7 @@ export const loginSchema = z.object({
 export const profileSchema = z
   .object({
     name: z.string().trim().min(2).max(80),
-    phone,
+    phone: bdMobile,
     address: z.string().trim().max(200),
   })
   .partial();
@@ -160,7 +171,7 @@ export const pushUnsubscribeSchema = z.object({ endpoint: z.string().url().max(1
 export const hubOperatorSchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().email(),
-  phone,
+  phone: bdMobile,
   password: z.string().min(8).max(100),
   hubId: objectId,
 });
