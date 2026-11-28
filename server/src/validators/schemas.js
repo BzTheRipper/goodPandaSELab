@@ -268,6 +268,12 @@ export const reviewSchema = z.object({
 });
 export const reviewReplySchema = z.object({ text: z.string().trim().max(1000) });
 
+export const forgotPasswordSchema = z.object({ email: z.string().trim().email() });
+export const resetPasswordSchema = z.object({
+  token: z.string().regex(/^[a-f\d]{64}$/i, 'This reset link is invalid'),
+  password: z.string().min(6).max(100),
+});
+
 export const passwordChangeSchema = z
   .object({
     currentPassword: z.string().min(1),

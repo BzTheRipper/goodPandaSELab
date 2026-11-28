@@ -30,6 +30,12 @@ const userSchema = new mongoose.Schema(
     creditBalance: { type: Number, default: 0, min: 0 },
     loyaltyStamps: { type: Number, default: 0, min: 0 },
     loyaltyRewards: { type: Number, default: 0, min: 0 },
+    // "Forgot password": only a SHA-256 hash of the emailed token is stored, never the token itself.
+    resetTokenHash: { type: String, default: null, select: false },
+    resetTokenExpiresAt: { type: Date, default: null, select: false },
+    resetRequestedAt: { type: Date, default: null, select: false },
+    // Login tokens issued before this moment stop working (set when the password is reset).
+    passwordChangedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -37,6 +43,9 @@ const userSchema = new mongoose.Schema(
 userSchema.set('toJSON', {
   transform: (_doc, ret) => {
     delete ret.passwordHash;
+    delete ret.resetTokenHash;
+    delete ret.resetTokenExpiresAt;
+    delete ret.resetRequestedAt;
     delete ret.__v;
     return ret;
   },

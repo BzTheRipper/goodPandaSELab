@@ -19,6 +19,11 @@ export async function userFromToken(token) {
   const user = await User.findById(payload.sub);
   if (!user) throw unauthorized('User no longer exists');
   if (!user.isActive) throw forbidden('Account is deactivated');
+  // After a password reset, logins from before it (on any device) are no longer accepted.
+  // `iat` is in whole seconds, so a token issued in the same second as the reset still works.
+  if (user.passwordChangedAt && payload.iat < Math.floor(user.passwordChangedAt.getTime() / 1000)) {
+    throw unauthorized('Your password was changed. Please log in again.');
+  }
   return user;
 }
 

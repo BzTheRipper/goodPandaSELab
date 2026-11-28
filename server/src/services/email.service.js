@@ -22,6 +22,32 @@ export async function sendEmail({ to, subject, text, html }) {
   return true;
 }
 
+const escapeHtml = (s = '') =>
+  String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+/** "Forgot password" email with a one-time link. */
+export function buildPasswordResetEmail(user, link, minutes) {
+  const name = user.name || 'there';
+  return {
+    to: user.email,
+    subject: 'Reset your GoodPanda password',
+    text: [
+      `Hi ${name},`,
+      '',
+      'We received a request to reset your GoodPanda password.',
+      `Open this link to choose a new one (it works once and expires in ${minutes} minutes):`,
+      link,
+      '',
+      "If you didn't ask for this, you can ignore this email. Your password won't change.",
+    ].join('\n'),
+    html: `<p>Hi ${escapeHtml(name)},</p>
+<p>We received a request to reset your GoodPanda password.</p>
+<p><a href="${escapeHtml(link)}" style="display:inline-block;padding:10px 18px;background:#16a34a;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Choose a new password</a></p>
+<p style="color:#555">This link works once and expires in ${minutes} minutes.</p>
+<p style="color:#555">If you didn't ask for this, you can ignore this email. Your password won't change.</p>`,
+  };
+}
+
 const money = (n) => `৳${Number(n || 0).toFixed(2)}`;
 
 /** Plain-text + minimal HTML receipt body for a collected order. */

@@ -39,6 +39,17 @@ export async function changePassword(req, res) {
   res.status(204).end();
 }
 
+// Same answer whether or not the email has an account, so it can't be used to find users.
+export async function forgotPassword(req, res) {
+  await authService.requestPasswordReset(req.body.email);
+  res.json({ ok: true, message: 'If an account exists for that email, we’ve sent a link to reset the password.' });
+}
+
+export async function resetPassword(req, res) {
+  await authService.resetPassword(req.body);
+  res.json({ ok: true, message: 'Your password has been reset. Please log in with your new password.' });
+}
+
 export async function setAvatar(req, res) {
   res.json({ user: await authService.setAvatar(req.user, req.file) });
 }
